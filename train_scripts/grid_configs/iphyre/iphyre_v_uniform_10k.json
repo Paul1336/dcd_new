@@ -1,0 +1,53 @@
+{
+	"grid" :{
+		"env_name":[
+			"Iphyre-AdversarialVLM10k-v0"
+		],
+
+	  "ued_algo": ["domain_randomization"],
+	  "num_processes": [64],
+	  "num_env_steps": [30000000],
+	  "num_steps": [256],
+	  "ppo_epoch": [30],
+	  "num_mini_batch":[4],
+	  "normalize_returns": [false],
+
+	  "checkpoint_basis":["student_grad_updates"],
+
+	  "recurrent_agent": [false],
+	  "recurrent_adversary_env": [false],
+	  "recurrent_hidden_size": [1],
+
+	  "lr": [2.5e-4],
+	  "max_grad_norm": [0.5],
+	  "gamma": [0.99],
+	  "gae_lambda": [0.95],
+	  "value_loss_coef": [0.5],
+	  "entropy_coef": [0.01],
+	  "adv_entropy_coef": [0.01],
+	  "clip_value_loss": [false],
+	  "clip_param": [0.2],
+	  "reward_shaping": [true],
+	  "use_categorical_adv": [true],
+	  "use_skip": [false],
+	  "choose_start_pos": [false],
+	  "sparse_rewards":[false],
+	  "handle_timelimits": [true],
+
+	  "test_env_names": ["Iphyre-HandDesign-v0,Iphyre-ProceduralRotate-v0,Iphyre-ProceduralShift-v0,Iphyre-VLMGeneratedRotate-v0,Iphyre-VLMGeneratedShift-v0"],
+		"reset_random_after_episode": [true],
+
+	  
+
+	  "log_interval": [1],
+	  "test_interval": [20],
+	  "test_num_episodes":[20],
+	  "test_num_processes":[1],
+	  "log_plr_buffer_stats": [true],
+	  "log_replay_complexity": [true],
+	  "checkpoint":[true],
+
+    "log_action_complexity": [false],
+    "log_grad_norm": [true]
+	}
+}
