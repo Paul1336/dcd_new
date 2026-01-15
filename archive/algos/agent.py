@@ -5,30 +5,29 @@
 # LICENSE file in the root directory of this source tree.
 
 class ACAgent(object):
+    """Actor-Critic Agent wrapper for algo and storage."""
     def __init__(self, algo, storage):
-    	self.algo = algo
-    	self.storage = storage
+        self.algo = algo
+        self.storage = storage
 
     def update(self, discard_grad=False, kl_dict=None):
-    	info = self.algo.update(self.storage, discard_grad=discard_grad, kl_dict=kl_dict)
-    	self.storage.after_update()
-
-    	return info
+        info = self.algo.update(self.storage, discard_grad=discard_grad, kl_dict=kl_dict)
+        self.storage.after_update()
+        return info
 
     def to(self, device):
-    	self.algo.actor_critic.to(device)
-    	self.storage.to(device)
+        self.algo.actor_critic.to(device)
+        self.storage.to(device)
+        return self
 
-    	return self
-	
     def update_lr(self, lr):
         self.algo.update_lr(lr)
 
     def train(self):
-    	self.algo.actor_critic.train()
+        self.algo.actor_critic.train()
 
     def eval(self):
-    	self.algo.actor_critic.eval()
+        self.algo.actor_critic.eval()
 
     def random(self):
         self.algo.actor_critic.random = True
@@ -40,13 +39,13 @@ class ACAgent(object):
             return action
 
     def act(self, *args, **kwargs):
-    	return self.algo.actor_critic.act(*args, **kwargs)
+        return self.algo.actor_critic.act(*args, **kwargs)
 
     def get_value(self, *args, **kwargs):
-    	return self.algo.actor_critic.get_value(*args, **kwargs)
+        return self.algo.actor_critic.get_value(*args, **kwargs)
 
     def insert(self, *args, **kwargs):
-    	return self.storage.insert(*args, **kwargs)
+        return self.storage.insert(*args, **kwargs)
 
     @property
     def is_recurrent(self):

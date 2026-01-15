@@ -10,7 +10,7 @@ def load_vlm_gen_tasks_solvable(env_name):
 
 def _create_iphyre_env(args):
     try:
-        env_names = load_vlm_gen_tasks_solvable(args.env_name)
+        env_names = load_vlm_gen_tasks_solvable(args, args.env_name)
     except Exception as e:
         raise RuntimeError(
             f"[EnvInitError] Failed to load Iphyre tasks, env name: {args.env_name}"

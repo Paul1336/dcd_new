@@ -12,11 +12,11 @@ import time
 import timeit 
 import logging 
 import random 
+from typing import Optional
 
 
 # === Third-party libraries ===
 import torch 
-from torchvision import utils as vutils
 import matplotlib.pyplot as plt 
 import numpy as np
 from baselines.logger import HumanOutputFormat 
@@ -24,13 +24,14 @@ import wandb
 
 
 # === modules ===
-from util.FileWriter import FileWriter
-from util.Parser import Parser
+from util.fileWriter import FileWriter
+from util.parser import Parser
 from util import make_plr_args, save_images
 from env import create_parallel_env
 from agent import create_agent
 from eval import create_evaluator
 from runner import create_runner
+from interfaces import SampledLevelInfo, FullObservation, RunnerStats, EvaluationStats
 
 def train(args):
     os.environ["OMP_NUM_THREADS"] = "1"
@@ -42,7 +43,7 @@ def train(args):
     print("seeding", args.seed)
 
     # === Determine device ====
-    if args.device.startswith("cuda"):
+    if 'cuda' in args.device:
         if not torch.cuda.is_available():
             print("CUDA not available, using CPU")
             args.device = "cpu"
@@ -149,10 +150,10 @@ def train(args):
     try:
         if not os.environ.get('LOCAL_TEST', False) and evaluator is not None:
             print('Performing zero-shot evaluation...')
-            test_stats = evaluator.evaluate(runner.agents['agent'])
-            test_stats['total_student_grad_updates'] = 0
-            test_stats['global_step'] = 0
-            wandb.log(test_stats)
+            test_stats: EvaluationStats = evaluator.evaluate(runner.get_agent('agent'))
+            test_stats.total_student_grad_updates= 0
+            test_stats.global_step = 0
+            wandb.log(test_stats.to_dict())
     except Exception :
         logging.exception(f"[ZeroShotEvalError]")
         raise
@@ -167,48 +168,39 @@ def train(args):
         global_step = j * args.num_steps * args.num_processes
         print(f"Iteration {j} of {num_updates} global_step: {global_step}")
         try:
-            stats = runner.run(global_step=global_step, iteration=j, total_iterations=num_updates)
+            stats: RunnerStats = runner.run(global_step=global_step, iteration=j, total_iterations=num_updates)
         except Exception :
             logging.exception(f"[RunnerRunError] In iteration {j},")
             raise
 
         # === Perform logging ===
-        stats['global_step'] = global_step
+        stats.global_step = global_step
         log = (j % args.log_interval == 0 and j != 0) or j == num_updates
         save_screenshot = (args.screenshot_interval > 0) and ((j % args.screenshot_interval == 0 or j == num_updates))
-        print('train stats', stats)
+        print('train stats', stats.to_dict())
         if log:
             # Eval
             print('Evaluating...')
-            test_stats = {}
+            test_stats: Optional[EvaluationStats] = None
             if evaluator is not None and (j % args.test_interval == 0 or j == num_updates):
-                test_stats = evaluator.evaluate(runner.agents['agent'])
-                stats.update(test_stats)
-                if args.use_accel_paired:
-                    adv_test_stats = evaluator.evaluate(runner.agents['adversary_agent'])
-                    curr_keys = list(adv_test_stats.keys())
-                    for curr_key in curr_keys:
-                        adv_test_stats[f"advagent_{curr_key}"] = adv_test_stats[curr_key]
-                        adv_test_stats.pop(curr_key, None)
-                    stats.update(adv_test_stats)
+                test_stats = evaluator.evaluate(runner.get_agent('agent'))
+                stats.extra.update(test_stats.to_dict())
             else:
                 if evaluator is not None:
-                    stats.update({k:None for k in evaluator.get_stats_keys()})
+                    stats.extra.update({k: None for k in evaluator.get_stats_keys()})
 
             update_end_time = timer()
-            num_incremental_updates = args.log_interval
-            sps = num_incremental_updates*(args.num_processes * args.num_steps) / (update_end_time - update_start_time)
+            sps = args.log_interval*(args.num_processes * args.num_steps) / (update_end_time - update_start_time)
             update_start_time = update_end_time
-            print(f"test_stats: {test_stats}")
+            print(f"test_stats: {test_stats.to_dict() if test_stats is not None else None}")
             # Step per second
             # For example, 600 sps
             # total 3M steps => 3000000/600/60/24 => 3.47 days
-            stats.update({'sps': sps})
-            stats.update(test_stats) # Ensures sps column is always before test stats
-            filewriter.log(stats)
+            stats.sps=sps
+            filewriter.log(stats.to_dict())
             if args.verbose:
-                HumanOutputFormat(sys.stdout).writekvs(stats)
-        wandb.log(stats)
+                HumanOutputFormat(sys.stdout).writekvs(stats.to_dict())
+        wandb.log(stats.to_dict())
 
         try:
             os.makedirs(f"{args.log_dir}/checkpoints", exist_ok=True)
@@ -224,10 +216,10 @@ def train(args):
             try:
                 os.makedirs(args.screenshot_dir, exist_ok=True)
                 print('Saving screenshot...')
-                level_info = runner.sampled_level_info
+                level_info: SampledLevelInfo = runner.sampled_level_info
                 venv.reset_agent()
                 try:
-                    full_obs = venv.remote_attr('cur_full_obs')
+                    full_obs: FullObservation = venv.remote_attr('cur_full_obs')
                     json.dump(full_obs, open(os.path.join(args.screenshot_dir, f'update{global_step}_obs.json'), 'w'))
                 except Exception :
                     logging.exception(f'No full obs,')

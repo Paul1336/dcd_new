@@ -1,7 +1,6 @@
 *~
 .venv
 venv
-env
 !.gitkeep
 tmp
 .DS_Store
