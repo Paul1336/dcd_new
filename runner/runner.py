@@ -15,11 +15,11 @@ class Runner:
         AgentRole.ADVERSARY_AGENT,
         AgentRole.ADVERSARY_ENV,}
     
-    def __init__(self, args, venv, agents, agent_type, ued_venv=None):
+    def __init__(self, args, venv, agents, required_roles, ued_venv=None):
         self.args = args
         self.venv = venv
         self.agents = agents
-        self._validate_agents(agent_type)
+        self._validate_agents(required_roles)
         self.device = args.device
         self.agent_rollout_steps = args.num_steps
         # ---- shared bookkeeping ----
@@ -83,15 +83,18 @@ class Runner:
 
 
     def state_dict(self) -> RunnerStateDict:
-        state: RunnerStateDict = super().state_dict()
-
-        state["sfl"] = {
-            "learnability_sampler": self.learnability_sampler.state_dict(),
-            "env_sampling_total_count": dict(self.env_sampling_total_count),
-            "env_sampling_current_count": dict(self.env_sampling_current_count),
-        }
-
-        return state
+        return {
+        "runner": {
+            "num_updates": self.num_updates,
+            "total_episodes_collected": self.total_episodes_collected,
+            "total_seeds_collected": self.total_seeds_collected,
+            "agent_returns": list(self.agent_returns),
+        },
+        "agents": {
+            role.value: agent.state_dict()
+            for role, agent in self.agents.items()
+        },
+    }
 
     def load_state_dict(self, state: dict):
         runner_state = state.get("runner", {})
@@ -109,7 +112,7 @@ class Runner:
             if role in self.agents:
                 self.agents[role].load_state_dict(agent_state)
 
-    def _validate_agents(self, agent_type):
+    def _validate_agents(self, required_roles):
         if not isinstance(self.agents, dict):
             raise TypeError("agents must be a dict[AgentRole, Agent]")
 
@@ -117,10 +120,10 @@ class Runner:
             if not isinstance(k, AgentRole):
                 raise TypeError(f"Invalid agent key: {k} (must be AgentRole)")
 
-        missing = agent_type - self.agents.keys()
+        missing = required_roles - self.agents.keys()
         if missing:
             raise ValueError(f"Missing required agents: {missing}")
-        unknown = set(self.agents.keys()) - agent_type
+        unknown = set(self.agents.keys()) - required_roles
         if unknown:
             raise ValueError(f"Unknown agent roles: {unknown}")
         

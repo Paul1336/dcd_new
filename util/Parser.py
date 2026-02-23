@@ -490,6 +490,16 @@ class Parser:
             "--verbose", 
             type=str2bool, nargs='?', const=True, default=False,
             help="Whether to print logs to stdout.")
+        self.parser.add_argument(
+            "--wandb_tags", 
+            type=str,
+            default="none",
+            help=f'''Comma-separated list of tags to add to the wandb run. E.g. "tag1,tag2,tag3".''')
+        self.parser.add_argument(
+            "--wandb_group", 
+            type=str,
+            default="none",
+            help=f'''Wandb group to assign the run to. Runs in the same group are aggregated together on wandb. E.g. "experiment1".''')
 
         # Evaluation arguments.
         self.parser.add_argument(

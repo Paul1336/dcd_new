@@ -4,7 +4,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-class ACAgent(object):
+class ACAgent:
     """Actor-Critic Agent wrapper for algo and storage."""
     def __init__(self, algo, storage):
         self.algo = algo

@@ -33,6 +33,7 @@ class RolloutResult(TypedDict):
     dist_entropy: Optional[torch.Tensor]
 
     update_info: Dict[str, Any]
+    sampled_levels: Optional[List[str]]  # SFL / curriculum 可用，沒有就 None
 
 
 # -------------------------

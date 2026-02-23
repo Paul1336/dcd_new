@@ -15,10 +15,7 @@ class LearnabilitySampler(object):
         self.staleness = staleness
         self.ued_algo = ued_algo
 
-        if ued_algo == 'old_sfl':
-            self.env_names = []
-        else:
-            self.env_names = venv.remote_attr('subsampled_env_ids', index=[0])[0][0]
+        self.env_names = venv.remote_attr('subsampled_env_ids', index=[0])[0][0]
 
         print('Learnability Sampler: First 10 env_names: ', self.env_names[:10])
         print('Learnability Sampler: len(env_names): ', len(self.env_names))
@@ -55,8 +52,6 @@ class LearnabilitySampler(object):
         return  json.dumps(PARAS[env_name]) + '@@' + str(env_name)
 
     def sample(self):
-        if self.ued_algo == 'old_sfl':
-            return self.wrap_level_result(random.choice(self.env_names))
         
         epsilon = 1e-6
         if self.learnability_alpha is None:
@@ -100,5 +95,9 @@ class LearnabilitySampler(object):
                 )[: self.top_k_to_sample_uniformly]
                 return self.wrap_level_result(random.choice(top_k_env_ids))
             else:
-                return self.wrap_level_result(random.choices(sampled_env_ids, task_priorities, k=1)[0])
-     
+                if not sampled_env_ids:
+                    raise RuntimeError("LearnabilitySampler.sample(): sampled_env_ids is empty")
+
+                return self.wrap_level_result(
+                    random.choices(sampled_env_ids, task_priorities, k=1)[0]
+                )

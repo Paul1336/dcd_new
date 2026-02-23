@@ -17,7 +17,7 @@ class SFLRunner(Runner):
             args=args,
             venv=venv,
             agents=agents,
-            agent_type={AgentRole.AGENT},
+            required_roles={AgentRole.AGENT},
             ued_venv=ued_venv,
         )
 
@@ -133,6 +133,29 @@ class SFLRunner(Runner):
                     success_rate=results[env_id]["success_rate"],
                 )
 
+    # def _set_obs_at_index(self, obs, obs_, i):
+    #     if isinstance(obs, dict):
+    #         for k in obs.keys(): 
+    #             obs[k][i] = obs_[k].squeeze(0)
+    #     else:
+    #         x = obs_
+    #         if hasattr(x, "ndim") and x.ndim >= 1 and x.shape[0] == 1:
+    #             x = x[0]
+    #         obs[i] = x
+
+    def _set_obs_at_index(self, obs, obs_, i):
+        if isinstance(obs, dict):
+            for k in obs.keys():
+                x = obs_[k]
+                if hasattr(x, "ndim") and x.ndim >= 1 and x.shape[0] == 1:
+                    x = x[0]
+                obs[k][i] = x
+        else:
+            x = obs_
+            if hasattr(x, "ndim") and x.ndim >= 1 and x.shape[0] == 1:
+                x = x[0]
+            obs[i] = x
+
     # -------------------------
     # rollout
     # -------------------------
@@ -143,8 +166,11 @@ class SFLRunner(Runner):
         # rollout_info = {}
         # rollout_returns = [[] for _ in range(args.num_processes)]
         # sample levels via learnability
-        sampled_levels = [self.learnability_sampler.sample() for _ in range(args.num_processes)]
-        self.venv.reset_to_level_batch(sampled_levels)
+        initial_levels = [self.learnability_sampler.sample() for _ in range(args.num_processes)]
+        self.venv.reset_to_level_batch(initial_levels)
+        self.total_seeds_collected += args.num_processes
+
+        levels_history = [[lvl] for lvl in initial_levels]   # list[list[level_id]]
 
         obs = self.venv.reset_agent()
         self.agent.storage.copy_obs_to_index(obs, 0)
@@ -160,7 +186,7 @@ class SFLRunner(Runner):
                     self.agent.storage.get_recurrent_hidden_state(step),
                     self.agent.storage.masks[step],
                 )
-                if self.is_discrete_actions:
+                if self.venv.action_space_is_discrete:
                     action_log_prob = action_log_dist.gather(-1, action)
                 else:
                     action_log_prob = action_log_dist
@@ -171,9 +197,9 @@ class SFLRunner(Runner):
 
             for i, info in enumerate(infos):
                 if "episode" in info:
-                    r = info["episode"]["r"]
-                    rollout_returns[i].append(r)
+                    rollout_returns[i].append(info["episode"]["r"])
                     env_name = self.venv.remote_attr("level_seed", index=[i])[0][0]
+                    
                     self.env_sampling_total_count[env_name] += 1
                     self.env_sampling_current_count[env_name] += 1
 
@@ -182,11 +208,16 @@ class SFLRunner(Runner):
                     print(
                         f" env_index={i:02d}, episodic_return={info['episode']['r']}, env={env_name}, current_count={self.env_sampling_current_count[env_name]}, total_count={self.env_sampling_total_count[env_name]}"
                     )
+                    new_level = self.learnability_sampler.sample()
+                    obs_i = self.venv.reset_to_level(new_level, i)
+                    self._set_obs_at_index(obs, obs_i, i)
+                    self.total_seeds_collected += 1
+
+                    # record
+                    current_levels[i] = new_level
+                    levels_history[i].append(new_level)
 
             masks = torch.FloatTensor([[0.0] if d else [1.0] for d in done])
-            bad_masks = torch.ones_like(masks)
-            cliffhanger_masks = torch.ones_like(masks)
-
             self.agent.insert(
                 obs,
                 rnn_state,
@@ -196,9 +227,7 @@ class SFLRunner(Runner):
                 value,
                 reward,
                 masks,
-                bad_masks,
-                level_seeds=None,
-                cliffhanger_masks=cliffhanger_masks,
+                level_seeds= None,
             )
         value_loss = action_loss = dist_entropy = None
         info = {}
@@ -223,6 +252,7 @@ class SFLRunner(Runner):
             "action_loss": action_loss,
             "dist_entropy": dist_entropy,
             "update_info": info,
+            "sampled_levels": levels_history,
         }
         return result
 
@@ -230,40 +260,41 @@ class SFLRunner(Runner):
     # main loop
     # -------------------------
     def run(self, global_step: int, iteration: int, total_iterations: int) -> dict:
-        args = self.args
 
         # update learnability periodically
         if self.is_training and (
-            iteration == 1 or iteration % args.update_learnability_every_iterations == 0
+            iteration == 1 or iteration % self.args.update_learnability_every_iterations == 0
         ):
             self._update_learnability_metrics(global_step)
 
         # LR annealing
         if self.is_training:
             frac = 1.0 - (iteration - 1.0) / total_iterations
-            self.agent.update_lr(frac * args.lr)
+            self.agent.update_lr(frac * self.args.lr)
 
         agent_info = self._agent_rollout(
-            num_steps=args.num_steps,
+            num_steps=self.args.num_steps,
             update=self.is_training,
         )
         for b in agent_info["returns"]:
             for r in reversed(b):
                 self.agent_returns.append(r)
-
         mean_agent_return = (
             float(np.mean(self.agent_returns)) if len(self.agent_returns) > 0 else 0.0
         )
+        # if self.is_training:
+        #     self.num_updates += 1
         sampled_level_info: SampledLevelInfo = {
             "source": "learnability",
-            "env_ids": sampled_levels,   # 或你能拿到的 env_id list
+            "env_ids": agent_info["sampled_levels"],   # 或你能拿到的 env_id list
             "level_replay": False,
-            "num_edits": [0 for _ in range(args.num_processes)],
+            "num_edits": [0 for _ in range(self.args.num_processes)],
         }
         self._sampled_level_info = sampled_level_info
 
         stats: RunnerStats = {
-            "steps": self.num_updates * args.num_processes * args.num_steps,
+            "steps": global_step,
+            "total_student_grad_updates": self.num_updates,
             "total_episodes": self.total_episodes_collected,
             "total_seeds": self.total_seeds_collected,
             "mean_agent_return": mean_agent_return,

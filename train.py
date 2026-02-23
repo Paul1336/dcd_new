@@ -141,6 +141,7 @@ def train(args):
 
     # === Train === 
     timer = timeit.default_timer
+    last_epoch = 0
     update_start_time = timer()
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
     print('archive_interval', args.archive_interval)
@@ -175,7 +176,7 @@ def train(args):
 
         # === Perform logging ===
         stats.global_step = global_step
-        log = (j % args.log_interval == 0 and j != 0) or j == num_updates
+        log = j == 1 or (j % args.log_interval == 0) or j == num_updates
         save_screenshot = (args.screenshot_interval > 0) and ((j % args.screenshot_interval == 0 or j == num_updates))
         print('train stats', stats.to_dict())
         if log:
@@ -190,7 +191,8 @@ def train(args):
                     stats.extra.update({k: None for k in evaluator.get_stats_keys()})
 
             update_end_time = timer()
-            sps = args.log_interval*(args.num_processes * args.num_steps) / (update_end_time - update_start_time)
+            sps = (j-last_epoch) * (args.num_processes * args.num_steps) / (update_end_time - update_start_time)
+            last_epoch = j
             update_start_time = update_end_time
             print(f"test_stats: {test_stats.to_dict() if test_stats is not None else None}")
             # Step per second
@@ -239,7 +241,6 @@ def train(args):
                 plt.close()
             except Exception :
                 logging.exception(f"[ScreenshotError]")
-
     try:
         print('Closing environments and wandb...')
         venv.close()
