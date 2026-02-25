@@ -24,7 +24,7 @@ import wandb
 
 
 # === modules ===
-from util.fileWriter import FileWriter
+from util.filewriter import FileWriter
 from util.parser import Parser
 from util import make_plr_args, save_images
 from env import create_parallel_env
