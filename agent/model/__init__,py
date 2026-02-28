@@ -1,5 +1,0 @@
-from .IphyreModel import IphyreModel
-
-__all__ = [
-    "IphyreModel",
-]

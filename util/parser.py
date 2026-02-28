@@ -8,6 +8,17 @@ import argparse
 import torch
 
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 
 class Parser:
     def __init__(self):
@@ -649,6 +660,42 @@ class Parser:
             '--should_freeze_embedding',
             type=str2bool, nargs='?', const=True, default=False,
             help='Freeze the embedding layer.'
+        )
+
+        self.parser.add_argument(
+            '--vlm_env_max_tasks',
+            type=int,
+            default=-1,
+            help='Cap the number of VLM-generated tasks loaded into the curriculum pool. -1 means no cap (use all).')
+
+        # Observation type arguments.
+        self.parser.add_argument(
+            '--obs_type',
+            type=str,
+            default='symbolic',
+            choices=['symbolic', 'embedding', 'image'],
+            help=(
+                'Observation type fed to the agent. '
+                '"symbolic": 122-dim flat vector with Deep Set encoder (default). '
+                '"embedding": images encoded upstream by a frozen CLIP model; '
+                'stores embeddings in the rollout buffer instead of raw pixels. '
+                '"image": raw pixel observations (not yet implemented).'
+            ),
+        )
+        self.parser.add_argument(
+            '--clip_model',
+            type=str,
+            default='ViT-B/32',
+            help='CLIP model variant used when obs_type="embedding". E.g. "ViT-B/32", "ViT-L/14".',
+        )
+        self.parser.add_argument(
+            '--clip_device',
+            type=str,
+            default='cpu',
+            help=(
+                'Device for the CLIP encoder during rollout collection when obs_type="embedding". '
+                'Defaults to "cpu" to keep GPU memory free for the PPO network.'
+            ),
         )
 
         self.parser.add_argument(

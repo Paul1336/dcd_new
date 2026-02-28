@@ -110,6 +110,10 @@ class VecEnv(ABC):
         self.close_extras()
         self.closed = True
 
+    @property
+    def action_space_is_discrete(self):
+        return hasattr(self.action_space, 'n')
+
     def step(self, actions):
         """
         Step the environments synchronously.

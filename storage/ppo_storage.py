@@ -1,12 +1,85 @@
+from typing import Optional, Tuple, Dict, Iterator, Union
+import numpy as np
+import torch
+from collections import defaultdict
+from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
+from interfaces import RnnHiddenState, ObsTensor, RolloutBatch
+try:
+    from lempel_ziv_complexity import lempel_ziv_complexity
+except ImportError:
+    lempel_ziv_complexity = None
+
+
+def to_tensor(a):
+    if isinstance(a, dict):
+        for k in a.keys():
+            if isinstance(a[k], np.ndarray):
+                a[k] = torch.from_numpy(a[k]).float()
+    elif isinstance(a, np.ndarray):
+        a = torch.from_numpy(a).float()
+    elif isinstance(a, list):
+        a = torch.tensor(a, dtype=torch.float)
+    return a
+
+
+def _flatten_helper(T, N, _tensor):
+    if isinstance(_tensor, dict):
+        return {k: _tensor[k].view(T * N, *_tensor[k].size()[2:]) for k in _tensor.keys()}
+    else:
+        return _tensor.view(T * N, *_tensor.size()[2:])
+
 
 class RolloutStorage(object):
-    def __init__(self, 
-                 model,
-                 num_steps, num_processes, observation_space, action_space, 
-                 recurrent_hidden_state_size, recurrent_arch='rnn', 
-                 use_proper_time_limits=False, 
-                 use_popart=False,
-                 device='cpu'):
+    def __init__(self,
+                model,
+                num_steps, num_processes, observation_space, action_space,
+                recurrent_hidden_state_size, recurrent_arch='rnn',
+                use_proper_time_limits=False,
+                use_popart=False,
+                device='cpu'):
+        """
+        Allocate all rollout buffers for T steps across N parallel environments.
+
+        Buffers (T = num_steps, N = num_processes):
+
+          Size T+1 (include episode-start and bootstrap slot):
+            obs                     [T+1, N, *obs_shape]
+            recurrent_hidden_states [T+1, N, H]  
+            masks                   [T+1, N, 1]           — 0.0 after a terminal state (resets RNN hidden state), else 1.0.
+            bad_masks               [T+1, N, 1]           — 0.0 when episode ended by time limit (not true terminal), else 1.0.
+            cliffhanger_masks       [T+1, N, 1]           — 0.0 at steps where the rollout cuts mid-episode, else 1.0.
+            value_preds             [T+1, N, 1]           — V(s_t) from critic.
+            returns                 [T+1, N, 1]           — GAE targets; groundtruth of V(s_t).
+
+          Size T (only collected transitions):
+            rewards                 [T, N, 1]            
+            actions                 [T, N, action_shape]  
+            action_log_probs        [T, N, 1]             
+            action_log_dist         [T, N, n_actions]    
+            level_seeds             [T, N, 1]             — level seed active at each step; used by UED/SFL tracking.
+
+          Optional (allocated only when use_proper_time_limits=True):
+            truncated_obs           same shape as obs     — obs at time-limit boundaries for correct bootstrap.
+            truncated_value_preds   same shape as value_preds — value estimates at time-limit boundaries.
+
+        Args:
+            model: actor-critic model; must expose get_value() when
+                use_proper_time_limits is True.
+            num_steps: int — T, number of environment steps per rollout.
+            num_processes: int — N, number of parallel environments.
+            observation_space: gym.Space or dict of gym.Space.
+            action_space: gym.Space — Discrete or Box.
+            recurrent_hidden_state_size: int — H, the size of one hidden state vector.
+            recurrent_arch: str — 'rnn' or 'lstm'.  Determines whether hidden
+                states are stored as a flat tensor or packed as [h|c].
+            use_proper_time_limits: bool — if True, allocate a truncated_obs
+                buffer and a truncated_value_preds buffer used to correct
+                value bootstrap at time-limit episode boundaries.
+            use_popart: bool — if True, value predictions are normalised by a
+                PopArt layer and must be de-normalised before computing TD
+                targets.
+            device.
+        """
 
         self.device = device
         self.model = model
@@ -34,6 +107,7 @@ class RolloutStorage(object):
 
             if self.use_proper_time_limits:
                 self.truncated_obs = torch.zeros_like(self.obs)
+
         self.recurrent_hidden_states = torch.zeros(
             num_steps + 1, num_processes, recurrent_hidden_state_buffer_size)
         self.rewards = torch.zeros(num_steps, num_processes, 1)
@@ -44,7 +118,7 @@ class RolloutStorage(object):
         if action_space.__class__.__name__ == 'Discrete':
             action_shape = 1
             self.action_log_dist = torch.zeros(num_steps, num_processes, action_space.n)
-        else: # Hack it to just store action prob for sampled action if continuous
+        else:
             action_shape = action_space.shape[0]
             self.action_log_dist = torch.zeros(num_steps, num_processes, 1)
 
@@ -53,12 +127,7 @@ class RolloutStorage(object):
             self.actions = self.actions.long()
 
         self.masks = torch.ones(num_steps + 1, num_processes, 1)
-
-        # Masks that indicate whether it's a true terminal state
-        # or time limit end state
         self.bad_masks = torch.ones(num_steps + 1, num_processes, 1)
-
-        # Keep track of cliffhanger timesteps
         self.cliffhanger_masks = torch.ones(num_steps + 1, num_processes, 1)
 
         self.truncated_value_preds = None
@@ -72,7 +141,19 @@ class RolloutStorage(object):
         self.num_steps = num_steps
         self.step = 0
 
-    def to(self, device):
+    def to(self, device: torch.device) -> None:
+        """
+        Move all buffers in-place to the given device and update self.device.
+
+        Handles both plain tensor and dict-obs layouts, and conditionally moves
+        truncated_obs / truncated_value_preds when use_proper_time_limits is True.
+
+        Args:
+            device: torch.device or str — target device (e.g. 'cuda:0', 'cpu').
+
+        Returns:
+            None
+        """
         self.device = device
 
         if self.is_dict_obs:
@@ -101,21 +182,56 @@ class RolloutStorage(object):
 
             self.truncated_value_preds = self.truncated_value_preds.to(device)
 
-    def get_obs(self, idx):
+    def get_obs(self, idx: int) -> ObsTensor:
         if self.is_dict_obs:
             return {k: self.obs[k][idx] for k in self.obs.keys()}
         else:
             return self.obs[idx]
 
-    def copy_obs_to_index(self, obs, index):
+    def set_obs(self, obs: ObsTensor, step: int) -> None:
         if self.is_dict_obs:
-            [self.obs[k][index].copy_(obs[k]) for k in self.obs.keys()]
+            [self.obs[k][step].copy_(obs[k]) for k in self.obs.keys()]
         else:
-            self.obs[index].copy_(obs)
+            self.obs[step].copy_(obs)
 
-    def insert(self, obs, recurrent_hidden_states, actions, action_log_probs, action_log_dist,
-               value_preds, rewards, masks, bad_masks, level_seeds=None, cliffhanger_masks=None):
-        if len(rewards.shape) == 3: rewards = rewards.squeeze(2)
+    def insert(
+        self,
+        obs: ObsTensor,
+        recurrent_hidden_states: RnnHiddenState,
+        actions: torch.Tensor,
+        action_log_probs: torch.Tensor,
+        action_log_dist: torch.Tensor,
+        value_preds: torch.Tensor,
+        rewards: torch.Tensor,
+        masks: torch.Tensor,
+        bad_masks: Optional[torch.Tensor] = None,
+        level_seeds: Optional[torch.Tensor] = None,
+        cliffhanger_masks: Optional[torch.Tensor] = None,
+    ) -> None:
+        """
+        Args:
+            obs: ObsTensor
+            recurrent_hidden_states: RnnHiddenState 
+            actions: torch.Tensor [N, act_shape]
+            action_log_probs: torch.Tensor [N, 1] — log π(a|s).
+            action_log_dist: torch.Tensor [N, n_act] (Discrete) or [N, 1] (continuous).
+            value_preds: torch.Tensor [N, 1] — V(s) estimates.
+            rewards: torch.Tensor [N, 1] or [N] or [N, 1, 1] — scalar rewards;
+                squeezed to [N, 1] internally if 3-D.
+            masks: torch.Tensor [N, 1] — 0 if the episode ended, 1 otherwise.
+            bad_masks: Optional[torch.Tensor] [N, 1] — 0 if the episode ended
+                due to a time-limit truncation, 1 for true terminals.  Defaults
+                to ones when None.
+            level_seeds: Optional[torch.Tensor] [N, 1] — integer seed of the
+                level currently running in each environment.
+            cliffhanger_masks: Optional[torch.Tensor] [N, 1] — auxiliary mask
+                for cliffhanger bookkeeping; left unchanged when None.
+        """
+        rewards = to_tensor(rewards)
+        if rewards.dim() == 3: rewards = rewards.squeeze(2)
+        if rewards.dim() == 1: rewards = rewards.unsqueeze(-1)
+        if bad_masks is None:
+            bad_masks = torch.ones_like(masks)
 
         if self.is_dict_obs:
             [self.obs[k][self.step + 1].copy_(obs[k]) for k in self.obs.keys()]
@@ -146,14 +262,21 @@ class RolloutStorage(object):
 
         self.step = (self.step + 1) % self.num_steps
 
-    def insert_truncated_obs(self, obs, index):
+    def insert_truncated_obs(self, obs: ObsTensor, index: int) -> None:
+        """
+        Args:
+            obs: ObsTensor — the observation at the truncation boundary for
+                environment index.
+            index: int — the environment index in [0, N-1] for which the
+                truncated observation applies.
+        """
         if self.is_dict_obs:
             [self.truncated_obs[k][self.step + 1][index].copy_(
                 to_tensor(obs[k])) for k in self.truncated_obs.keys()]
         else:
             self.truncated_obs[self.step + 1][index].copy_(to_tensor(obs))
 
-    def after_update(self):
+    def after_update(self) -> None:
         if self.is_dict_obs:
             [self.obs[k][0].copy_(self.obs[k][-1]) for k in self.obs.keys()]
         else:
@@ -163,10 +286,16 @@ class RolloutStorage(object):
         self.bad_masks[0].copy_(self.bad_masks[-1])
         self.cliffhanger_masks[0].copy_(self.cliffhanger_masks[-1])
 
-    def replace_final_return(self, returns):
+    def replace_final_return(self, returns: torch.Tensor) -> None:
         self.rewards[-1] = returns
 
     def _compute_truncated_value_preds(self):
+        """
+        Returns:
+            torch.Tensor [T+1, N, 1] — self.truncated_value_preds with
+                corrected V(s) values at truncated steps and original V(s)
+                values everywhere else.
+        """
         self.truncated_value_preds.copy_(self.value_preds)
         with torch.no_grad():
             # For each process, forward truncated obs
@@ -191,11 +320,24 @@ class RolloutStorage(object):
 
         return self.truncated_value_preds
 
-    def compute_gae_returns(self, 
-                            returns_buffer,
-                            next_value, 
-                            gamma, 
-                            gae_lambda):
+    def compute_gae_returns(
+        self,
+        returns_buffer: torch.Tensor,
+        next_value: torch.Tensor,
+        gamma: float,
+        gae_lambda: float,
+    ) -> None:
+        """
+        Args:
+            returns_buffer: torch.Tensor [T+1, N, 1] — unused directly; the
+                results are always written into self.returns.  Present for API
+                symmetry with compute_discounted_returns.
+            next_value: torch.Tensor [N, 1] — V(s_{T+1}), the bootstrap value
+                estimated at the end of the rollout.
+            gamma: float — discount factor.
+            gae_lambda: float — GAE smoothing parameter (0 = TD(0),
+                1 = Monte-Carlo).
+        """
         self.value_preds[-1] = next_value
         gae = 0
         value_preds = self.value_preds
@@ -216,10 +358,21 @@ class RolloutStorage(object):
             gae = delta + gamma * gae_lambda * self.masks[step + 1] * gae
             self.returns[step] = gae + value_preds[step]
 
-    def compute_discounted_returns(self,
-                                   returns_buffer, 
-                                   next_value,
-                                   gamma):
+    def compute_discounted_returns(
+        self,
+        returns_buffer: torch.Tensor,
+        next_value: torch.Tensor,
+        gamma: float,
+    ) -> None:
+        """
+        Args:
+            returns_buffer: torch.Tensor [T+1, N, 1] — buffer to write
+                returns into (typically self.returns).
+            next_value: torch.Tensor [N, 1] — V(s_{T+1}), the bootstrap value
+                estimated at the end of the rollout; written to
+                self.value_preds[-1].
+            gamma: float — discount factor.
+        """
         self.value_preds[-1] = next_value
         value_preds = self.value_preds
 
@@ -236,11 +389,22 @@ class RolloutStorage(object):
             returns_buffer[step] = returns_buffer[step + 1] * \
                 gamma * self.masks[step + 1] + self.rewards[step]
 
-    def compute_returns(self,
-                        next_value,
-                        use_gae,
-                        gamma,
-                        gae_lambda):
+    def compute_returns(
+        self,
+        next_value: torch.Tensor,
+        use_gae: bool,
+        gamma: float,
+        gae_lambda: float,
+    ) -> None:
+        """
+        Args:
+            next_value: torch.Tensor [N, 1] — bootstrap value V(s_{T+1})
+                estimated at the end of the rollout.
+            use_gae: bool — if True use GAE; if False use plain discounted
+                returns.
+            gamma: float — discount factor.
+            gae_lambda: float — GAE lambda (only used when use_gae=True).
+        """
         if use_gae:
             self.compute_gae_returns(
                 self.returns, next_value, gamma, gae_lambda)
@@ -248,15 +412,32 @@ class RolloutStorage(object):
             self.compute_discounted_returns(
                 self.returns, next_value, gamma)
 
-    def get_batched_value_loss(self, 
-            signed=False, 
-            positive_only=False, 
-            power=1, 
-            clipped=True, 
-            batched=True):
+    def get_batched_value_loss(
+        self,
+        signed: bool = False,
+        positive_only: bool = False,
+        power: int = 1,
+        clipped: bool = True,
+        batched: bool = True,
+    ) -> Union[torch.Tensor, float]:
         """
-        Assumes buffer contains pre-computed returns via compute_returns.
-        Computes the mean episodic value loss per batch.
+        Args:
+            signed: bool — if True return signed TD error (returns - V);
+                if False (default) return absolute TD error |returns - V|.
+            positive_only: bool — if True clamp negative TD errors to 0 so
+                only positive surprises are counted.  Overridden by signed
+                when both are True.
+            power: int — exponentiate the TD error to this power before
+                averaging (e.g. power=2 gives MSE-like loss).
+            clipped: bool — if True clamp the per-env mean TD error to [-1, 1]
+                before returning.
+            batched: bool — if True return per-env scores; if False return a
+                single scalar mean over all environments.
+        Returns:
+            Union[torch.Tensor, float] —
+                batched=True:  torch.Tensor [N, 1] — per-environment mean TD
+                    error (optionally clipped).
+                batched=False: float — scalar mean over all environments.
         """
 
         # If agent uses popart, then value_preds are normalized, while 
@@ -287,9 +468,12 @@ class RolloutStorage(object):
         else:
             return batch_td.mean().item()
 
-    def get_batched_action_complexity(self):
+    def get_batched_action_complexity(self) -> torch.Tensor:
         """
-        Returns per-batch LZ complexity scores of the action trajectories in the buffer
+        Requires the lempel_ziv_complexity package to be installed.
+        Returns:
+            torch.Tensor [N, 1] — mean LZ complexity score across all
+                episodes seen in the buffer for each of the N environments.
         """
         num_processes = self.actions.shape[1]
         batched_complexity = torch.zeros(num_processes, 1, dtype=torch.float)
@@ -309,9 +493,12 @@ class RolloutStorage(object):
 
         return batched_complexity
 
-    def get_action_complexity(self):
+    def get_action_complexity(self) -> float:
         """
-        Returns mean LZ complexity scores of the action trajectories in the buffer
+        Requires the lempel_ziv_complexity package to be installed.
+        Returns:
+            float — mean LZ complexity averaged over every episode trajectory
+                across all N environments in the buffer.
         """
         num_processes = self.actions.shape[1]
         avg_complexity = 0
@@ -329,7 +516,21 @@ class RolloutStorage(object):
     
         return avg_complexity/num_traj
 
-    def get_action_traj(self, as_string=False):
+    def get_action_traj(self, as_string: bool = False) -> Union[list, torch.Tensor]:
+        """
+        Args:
+            as_string: bool — if False (default) return the raw action tensor
+                with the trailing size-1 dimension squeezed out.  If True,
+                return a list of space-separated action strings, one per
+                environment.
+        Returns:
+            Union[torch.Tensor, list] —
+                as_string=False: torch.Tensor [T, N] (long) — raw actions for
+                    all T steps and N environments.
+                as_string=True:  list[str] of length N — each string is the
+                    sequence of integer action values for one environment,
+                    separated by spaces.
+        """
         if as_string:
             num_processes = self.actions.shape[1]
             traj = []
@@ -340,20 +541,67 @@ class RolloutStorage(object):
         else:
             return self.actions.squeeze(-1)
 
-    def _split_batched_lstm_recurrent_hidden_states(self, hxs):
+    def _split_batched_lstm_recurrent_hidden_states(
+        self, hxs: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Args:
+            hxs: torch.Tensor [N, 2*H] — packed hidden state where the first
+                H columns are h (hidden state) and the last H columns are c
+                (cell state).
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor] —
+                (h, c) where each is torch.Tensor [N, H].
+        """
         return (hxs[:, :self.recurrent_hidden_state_size],
                 hxs[:, self.recurrent_hidden_state_size:])
 
-    def get_recurrent_hidden_state(self, step):
+    def get_recurrent_hidden_state(self, step: int) -> RnnHiddenState:
+        """
+        Args:
+            step: int — time index in [0, T].  Index 0 is the hidden state at
+                the start of the rollout; index T is the hidden state after the
+                final step.
+        Returns:
+            RnnHiddenState —
+                RNN:  torch.Tensor [N, H] — the hidden state at step.
+                LSTM: Tuple[torch.Tensor, torch.Tensor] — (h, c) each
+                    torch.Tensor [N, H].
+        """
         if self.is_lstm:
             return self._split_batched_lstm_recurrent_hidden_states(
                     self.recurrent_hidden_states[step,:].squeeze(0))
         return self.recurrent_hidden_states[step]
 
-    def feed_forward_generator(self,
-                               advantages,
-                               num_mini_batch=None,
-                               mini_batch_size=None):
+    def feed_forward_generator(
+        self,
+        advantages: Optional[torch.Tensor],
+        num_mini_batch: Optional[int] = None,
+        mini_batch_size: Optional[int] = None,
+    ) -> Iterator[RolloutBatch]:
+        """
+        Args:
+            advantages: Optional[torch.Tensor] [T, N, 1] — pre-computed
+                advantage estimates.  If None, adv_targ in the yielded batch
+                will also be None.
+            num_mini_batch: Optional[int] — number of mini-batches to split
+                the rollout into.  Mutually exclusive with mini_batch_size.
+            mini_batch_size: Optional[int] — explicit size of each mini-batch
+                in transitions.  Overrides num_mini_batch when provided.
+
+        Yields:
+            RolloutBatch — tuple of:
+                obs_batch: ObsTensor [B, *obs_shape] or dict thereof.
+                recurrent_hidden_states_batch: RnnHiddenState [B, H] (RNN) or
+                    Tuple[[B, H], [B, H]] (LSTM).
+                actions_batch: torch.Tensor [B, act_shape].
+                value_preds_batch: torch.Tensor [B, 1].
+                return_batch: torch.Tensor [B, 1].
+                masks_batch: torch.Tensor [B, 1].
+                old_action_log_probs_batch: torch.Tensor [B, 1].
+                adv_targ: Optional[torch.Tensor] [B, 1].
+            where B = mini_batch_size.
+        """
         num_steps, num_processes = self.rewards.size()[0:2]
         batch_size = num_processes * num_steps
 
@@ -402,7 +650,32 @@ class RolloutStorage(object):
             yield obs_batch, recurrent_hidden_states_batch, actions_batch, \
                 value_preds_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ
 
-    def recurrent_generator(self, advantages, num_mini_batch):
+    def recurrent_generator(
+        self,
+        advantages: torch.Tensor,
+        num_mini_batch: int,
+    ) -> Iterator[RolloutBatch]:
+        """
+        Args:
+            advantages: torch.Tensor [T, N, 1] — pre-computed advantage
+                estimates.
+            num_mini_batch: int — number of mini-batches.  Must satisfy
+                N >= num_mini_batch so that each batch contains at least one
+                environment.
+
+        Yields:
+            RolloutBatch — tuple of:
+                obs_batch: ObsTensor [T*B, *obs_shape] or dict thereof,
+                    where B = num_envs_per_batch.
+                recurrent_hidden_states_batch: RnnHiddenState [B, H] (RNN) or
+                    Tuple[[B, H], [B, H]] (LSTM) — initial hidden states only.
+                actions_batch: torch.Tensor [T*B, act_shape].
+                value_preds_batch: torch.Tensor [T*B, 1].
+                return_batch: torch.Tensor [T*B, 1].
+                masks_batch: torch.Tensor [T*B, 1].
+                old_action_log_probs_batch: torch.Tensor [T*B, 1].
+                adv_targ: torch.Tensor [T*B, 1].
+        """
         num_processes = self.rewards.size(1)
         assert num_processes >= num_mini_batch, (
             "PPO requires the number of processes ({}) "

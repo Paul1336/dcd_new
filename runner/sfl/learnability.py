@@ -1,3 +1,4 @@
+import random
 class LearnabilitySampler(object):
 
     def __init__(self, 
@@ -41,15 +42,25 @@ class LearnabilitySampler(object):
 
         self.learnability_last_updated_global_step = global_step
 
+    def state_dict(self) -> dict:
+        return {
+            "task_info_dict": dict(self.task_info_dict),
+            "learnability_last_updated_global_step": self.learnability_last_updated_global_step,
+        }
+
+    def load_state_dict(self, state: dict) -> None:
+        self.task_info_dict = state.get("task_info_dict", self.task_info_dict)
+        self.learnability_last_updated_global_step = state.get(
+            "learnability_last_updated_global_step", -1
+        )
+
     def update_env_names(self, env_names):
         self.env_names = env_names
         print('update env_names: ', self.env_names)
 
     def wrap_level_result(self, env_name):
-        import json
-
-        # print('sampled level success_rate : ', self.task_info_dict[level]['zero_shot_success_rate'])
-        return  json.dumps(PARAS[env_name]) + '@@' + str(env_name)
+        """Return a level identifier string for venv.reset_to_level()."""
+        return str(env_name)
 
     def sample(self):
         

@@ -26,11 +26,11 @@ def save_images(images, path, normalize=True, channels_first=False):
     vutils.save_image(grid, path)
 
 
-def make_plr_args(args):
-    return dict( 
-        seeds=[], 
-        obs_space=args.obs_space, 
-        action_space=args.action_space, 
+def make_plr_args(args, obs_space=None, act_space=None):
+    return dict(
+        seeds=[],
+        obs_space=obs_space,
+        action_space=act_space,
         num_actors=args.num_processes,
         strategy=args.level_replay_strategy,
         replay_schedule=args.level_replay_schedule,

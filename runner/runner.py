@@ -28,7 +28,7 @@ class Runner:
         self.total_seeds_collected = 0
         # last iteration info (for logging / screenshot)
         self._sampled_level_info: Optional[SampledLevelInfo] = None
-        if args.adv_normalize_returns:
+        if getattr(args, 'adv_normalize_returns', False):
             self.env_return_rms = RunningMeanStd(shape=())
 
     def get_agent(self, role: AgentRole | str):
@@ -105,6 +105,8 @@ class Runner:
         self.total_seeds_collected = runner_state.get(
             "total_seeds_collected", 0
         )
+        for r in runner_state.get("agent_returns", []):
+            self.agent_returns.append(r)
 
         agents_state = state.get("agents", {})
         for role_str, agent_state in agents_state.items():

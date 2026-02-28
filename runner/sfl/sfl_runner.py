@@ -8,7 +8,7 @@ import torch
 
 from ..runner import Runner, AgentRole
 from .learnability import LearnabilitySampler 
-from ...interfaces import SampledLevelInfo , RunnerStats, RolloutResult, RunnerStateDict
+from ...interfaces import SampledLevelInfo, RunnerStats, RolloutResult, RunnerStateDict
 
 class SFLRunner(Runner):
 
@@ -55,10 +55,16 @@ class SFLRunner(Runner):
                 "num_updates": self.num_updates,
                 "total_episodes_collected": self.total_episodes_collected,
                 "total_seeds_collected": self.total_seeds_collected,
+                "agent_returns": list(self.agent_returns),
             },
             "agents": {
                 role.value: agent.state_dict()
                 for role, agent in self.agents.items()
+            },
+            "sfl": {
+                "learnability_sampler": self.learnability_sampler.state_dict(),
+                "env_sampling_total_count": dict(self.env_sampling_total_count),
+                "env_sampling_current_count": dict(self.env_sampling_current_count),
             },
         }
 
@@ -133,15 +139,10 @@ class SFLRunner(Runner):
                     success_rate=results[env_id]["success_rate"],
                 )
 
-    # def _set_obs_at_index(self, obs, obs_, i):
-    #     if isinstance(obs, dict):
-    #         for k in obs.keys(): 
-    #             obs[k][i] = obs_[k].squeeze(0)
-    #     else:
-    #         x = obs_
-    #         if hasattr(x, "ndim") and x.ndim >= 1 and x.shape[0] == 1:
-    #             x = x[0]
-    #         obs[i] = x
+    def _get_obs_at_index(self, obs, i):
+        if isinstance(obs, dict):
+            return {k: v[i] for k, v in obs.items()}
+        return obs[i]
 
     def _set_obs_at_index(self, obs, obs_, i):
         if isinstance(obs, dict):
@@ -162,10 +163,6 @@ class SFLRunner(Runner):
     def _agent_rollout(self, num_steps: int, update: bool = True)-> RolloutResult:
         args = self.args
         # 
-        # self.agent.storage.copy_obs_to_index(obs,0)
-        # rollout_info = {}
-        # rollout_returns = [[] for _ in range(args.num_processes)]
-        # sample levels via learnability
         initial_levels = [self.learnability_sampler.sample() for _ in range(args.num_processes)]
         self.venv.reset_to_level_batch(initial_levels)
         self.total_seeds_collected += args.num_processes
@@ -173,11 +170,11 @@ class SFLRunner(Runner):
         levels_history = [[lvl] for lvl in initial_levels]   # list[list[level_id]]
 
         obs = self.venv.reset_agent()
-        self.agent.storage.copy_obs_to_index(obs, 0)
+        self.agent.storage.set_obs(obs, 0)
         rollout_returns = [[] for _ in range(args.num_processes)]
 
         for step in range(num_steps):
-            if args.render:
+            if getattr(args, 'render', False):
                 self.venv.render_to_screen()
             with torch.no_grad():
                 obs_id = self.agent.storage.get_obs(step)
@@ -195,29 +192,45 @@ class SFLRunner(Runner):
             if args.clip_reward:
                 reward = torch.clamp(reward, -args.clip_reward, args.clip_reward)
 
+            # Cliffhanger: force done=True at the last rollout step for all envs.
+            # Non-done envs are mid-episode cuts; mark them truncated+cliffhanger
+            # so the learnability sampler and GAE handle them correctly.
+            if step == num_steps - 1:
+                if self.agent.storage.use_proper_time_limits:
+                    for i, done_ in enumerate(done):
+                        if not done_:
+                            infos[i]['cliffhanger'] = True
+                            infos[i]['truncated'] = True
+                            infos[i]['truncated_obs'] = self._get_obs_at_index(obs, i)
+                done = [True] * len(done)
+
             for i, info in enumerate(infos):
                 if "episode" in info:
                     rollout_returns[i].append(info["episode"]["r"])
                     env_name = self.venv.remote_attr("level_seed", index=[i])[0][0]
-                    
+
                     self.env_sampling_total_count[env_name] += 1
                     self.env_sampling_current_count[env_name] += 1
-
                     self.total_episodes_collected += 1
 
                     print(
                         f" env_index={i:02d}, episodic_return={info['episode']['r']}, env={env_name}, current_count={self.env_sampling_current_count[env_name]}, total_count={self.env_sampling_total_count[env_name]}"
                     )
+
+                    if self.agent.storage.use_proper_time_limits:
+                        if 'truncated_obs' in info:
+                            self.agent.storage.insert_truncated_obs(info['truncated_obs'], index=i)
+
                     new_level = self.learnability_sampler.sample()
                     obs_i = self.venv.reset_to_level(new_level, i)
                     self._set_obs_at_index(obs, obs_i, i)
                     self.total_seeds_collected += 1
 
-                    # record
-                    current_levels[i] = new_level
                     levels_history[i].append(new_level)
 
             masks = torch.FloatTensor([[0.0] if d else [1.0] for d in done])
+            bad_masks = torch.FloatTensor([[0.0] if 'truncated' in info else [1.0] for info in infos])
+            cliffhanger_masks = torch.FloatTensor([[0.0] if 'cliffhanger' in info else [1.0] for info in infos])
             self.agent.insert(
                 obs,
                 rnn_state,
@@ -227,7 +240,9 @@ class SFLRunner(Runner):
                 value,
                 reward,
                 masks,
-                level_seeds= None,
+                bad_masks=bad_masks,
+                cliffhanger_masks=cliffhanger_masks,
+                level_seeds=None,
             )
         value_loss = action_loss = dist_entropy = None
         info = {}
@@ -259,7 +274,7 @@ class SFLRunner(Runner):
     # -------------------------
     # main loop
     # -------------------------
-    def run(self, global_step: int, iteration: int, total_iterations: int) -> dict:
+    def run(self, global_step: int, iteration: int, total_iterations: int) -> RunnerStats:
 
         # update learnability periodically
         if self.is_training and (
@@ -284,23 +299,22 @@ class SFLRunner(Runner):
         )
         # if self.is_training:
         #     self.num_updates += 1
-        sampled_level_info: SampledLevelInfo = {
+        self._sampled_level_info: SampledLevelInfo = {
             "source": "learnability",
-            "env_ids": agent_info["sampled_levels"],   # 或你能拿到的 env_id list
+            "env_ids": [h[-1] for h in agent_info["sampled_levels"]] if agent_info["sampled_levels"] else [],
             "level_replay": False,
-            "num_edits": [0 for _ in range(self.args.num_processes)],
+            "num_edits": [0] * self.args.num_processes,
         }
-        self._sampled_level_info = sampled_level_info
 
-        stats: RunnerStats = {
-            "steps": global_step,
-            "total_student_grad_updates": self.num_updates,
-            "total_episodes": self.total_episodes_collected,
-            "total_seeds": self.total_seeds_collected,
-            "mean_agent_return": mean_agent_return,
-            "agent_value_loss": agent_info["value_loss"],
-            "agent_pg_loss": agent_info["action_loss"],
-            "agent_dist_entropy": agent_info["dist_entropy"],
-            "agent_lr": agent_info["update_info"].get("lr", None),
-        }
+        stats = RunnerStats(
+            steps=global_step,
+            global_step=global_step,
+            total_episodes=self.total_episodes_collected,
+            total_seeds=self.total_seeds_collected,
+            mean_agent_return=mean_agent_return,
+            agent_value_loss=agent_info["value_loss"],
+            agent_pg_loss=agent_info["action_loss"],
+            agent_dist_entropy=agent_info["dist_entropy"],
+            agent_lr=agent_info["update_info"].get("lr", None),
+        )
         return stats
