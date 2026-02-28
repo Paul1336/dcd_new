@@ -30,9 +30,9 @@ def worker(remote, parent_remote, env_fn_wrappers):
         if done:
             if reset_random:
                 env.reset_random()
-                ob = env.reset_agent()
-            else:
-                ob = env.reset_agent()
+            ob = env.reset_agent()
+            if hasattr(env, '_elapsed_steps'):
+                env._elapsed_steps = 0
 
         return ob, reward, done, info
 
@@ -75,8 +75,17 @@ def worker(remote, parent_remote, env_fn_wrappers):
                 break
             elif cmd == 'get_spaces_spec':
                 remote.send(CloudpickleWrapper((envs[0].observation_space, envs[0].action_space, envs[0].spec)))
+            elif cmd == 'reset_agent':
+                result = [env.reset_agent() for env in envs]
+                for env in envs:
+                    if hasattr(env, '_elapsed_steps'):
+                        env._elapsed_steps = 0
+                remote.send(result)
             elif cmd == 'reset_to_level':
-                remote.send([envs[0].reset_to_level(data)])
+                ob = envs[0].reset_to_level(data)
+                if hasattr(envs[0], '_elapsed_steps'):
+                    envs[0]._elapsed_steps = 0
+                remote.send([ob])
             elif cmd == 'reset_alp_gmm':
                 remote.send([envs[0].reset_alp_gmm(data)])
             elif cmd == 'max_episode_steps':
