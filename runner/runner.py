@@ -1,7 +1,7 @@
 from enum import Enum
 from baselines.common.running_mean_std import RunningMeanStd
 from collections import deque
-from typing import Optional
+from typing import List, Optional, Union
 from interfaces import SampledLevelInfo, RunnerStats, RunnerStateDict
 class AgentRole(str, Enum):
     AGENT = "agent"
@@ -31,7 +31,7 @@ class Runner:
         if getattr(args, 'adv_normalize_returns', False):
             self.env_return_rms = RunningMeanStd(shape=())
 
-    def get_agent(self, role: AgentRole | str):
+    def get_agent(self, role: Union[AgentRole, str]):
         if isinstance(role, str):
             role = AgentRole(role)
         agent = self.agents.get(role)
@@ -41,7 +41,7 @@ class Runner:
             )
         return agent
     
-    def train(self, roles: list[str] | None = None):
+    def train(self, roles: Optional[List[str]] = None):
         """Switch all agents to training mode."""
         roles = self._resolve_roles(roles)
         for role in roles:
@@ -49,7 +49,7 @@ class Runner:
             if agent is not None:
                 agent.train()
 
-    def eval(self, roles: list[str] | None = None):
+    def eval(self, roles: Optional[List[str]] = None):
         """Switch all agents to eval mode."""
         roles = self._resolve_roles(roles)
         for role in roles:
@@ -129,11 +129,11 @@ class Runner:
         if unknown:
             raise ValueError(f"Unknown agent roles: {unknown}")
         
-    def _resolve_roles(self, roles: list[str] | None) -> list[AgentRole]:
+    def _resolve_roles(self, roles: Optional[List[str]]) -> List[AgentRole]:
         if roles is None:
             return list(self.agents.keys())
 
-        resolved: list[AgentRole] = []
+        resolved: List[AgentRole] = []
 
         for role_str in roles:
             try:
