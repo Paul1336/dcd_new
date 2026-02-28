@@ -8,7 +8,7 @@ import torch
 
 from ..runner import Runner, AgentRole
 from .learnability import LearnabilitySampler 
-from ...interfaces import SampledLevelInfo, RunnerStats, RolloutResult, RunnerStateDict
+from interfaces import SampledLevelInfo, RunnerStats, RolloutResult, RunnerStateDict
 
 class SFLRunner(Runner):
 

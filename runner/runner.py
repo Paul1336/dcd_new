@@ -2,7 +2,7 @@ from enum import Enum
 from baselines.common.running_mean_std import RunningMeanStd
 from collections import deque
 from typing import Optional
-from ..interfaces import SampledLevelInfo, RunnerStats, RunnerStateDict
+from interfaces import SampledLevelInfo, RunnerStats, RunnerStateDict
 class AgentRole(str, Enum):
     AGENT = "agent"
     ADVERSARY_AGENT = "adversary_agent"

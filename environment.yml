@@ -1,0 +1,109 @@
+name: dcd_new
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8.20
+  - pip=24.2
+  - setuptools
+  - wheel
+  - pip:
+    # --- core scientific ---
+    - numpy==1.19.5
+    - scipy==1.10.1
+    - pandas==1.4.4
+    - matplotlib==3.6.3
+    - seaborn==0.12.2
+    - scikit-learn==1.1.1
+    - sympy==1.13.3
+    - networkx==2.5
+
+    # --- PyTorch (CUDA 11.8) ---
+    # Install AFTER creating the env:
+    #   pip install torch==2.3.1+cu118 torchvision==0.18.1+cu118 torchaudio==2.3.1+cu118 --index-url https://download.pytorch.org/whl/cu118
+    # For CPU-only:
+    #   pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1
+
+    # --- RL / gym ---
+    - gym==0.15.7
+    - gym-minigrid==1.0.1
+    - cloudpickle==1.2.2
+    - pyglet==1.5.0
+
+    # --- iphyre deps ---
+    - pygame==2.6.1
+    - pymunk==6.11.1
+    - box2d==2.3.10
+
+    # --- CLIP / vision ---
+    - clip==1.0
+    - ftfy==6.2.3
+    - regex==2024.11.6
+    - pillow==10.4.0
+    - opencv-python==4.12.0.88
+    - torchvision==0.18.1
+
+    # --- NLP / transformers ---
+    - transformers==4.46.3
+    - tokenizers==0.20.3
+    - huggingface-hub==0.36.0
+    - safetensors==0.5.3
+
+    # --- logging ---
+    - wandb==0.22.3
+    - tensorboard==2.11.2
+    - tensorboard-data-server==0.6.1
+    - tensorboard-plugin-wit==1.8.1
+    - gitpython==3.1.45
+    - sentry-sdk==2.43.0
+
+    # --- tensorflow (optional, old version) ---
+    - tensorflow==2.4.1
+    - tensorflow-estimator==2.4.0
+    - keras-preprocessing==1.1.2
+
+    # --- geo (may need conda-forge build on Windows) ---
+    - geopandas==0.9.0
+    - fiona==1.10.1
+    - pyproj==3.5.0
+    - shapely==2.0.7
+
+    # --- utilities ---
+    - tqdm==4.67.1
+    - click==8.1.8
+    - pyyaml==6.0.3
+    - packaging==25.0
+    - filelock==3.13.1
+    - fsspec==2024.6.1
+    - jinja2==3.1.6
+    - markupsafe==2.1.5
+    - typing-extensions==4.13.2
+    - six==1.15.0
+    - python-dateutil==2.9.0.post0
+    - pytz==2025.2
+    - decorator==5.2.1
+    - future==1.0.0
+    - cma==2.7.0
+    - lempel-ziv-complexity==0.2.2
+    - treelib==1.6.1
+    - gin-config==0.1.1
+    - joblib==1.4.2
+    - threadpoolctl==3.5.0
+    - mpmath==1.3.0
+    - wcwidth==0.2.14
+    - zipp==3.20.2
+    - importlib-metadata==8.5.0
+    - certifi==2025.10.5
+    - charset-normalizer==3.4.4
+    - idna==3.11
+    - urllib3==2.2.3
+    - requests==2.32.4
+    - pydantic==2.10.6
+    - pydantic-core==2.27.2
+    - annotated-types==0.7.0
+    - eval-type-backport==0.2.2
+    - attrs==25.3.0
+    - platformdirs==4.3.6
+
+    # NOTE: pyvirtualdisplay is Linux-only (Xvfb), skip on Windows
+    # NOTE: baselines (OpenAI) must be installed manually — see README below
