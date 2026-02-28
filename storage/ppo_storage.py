@@ -189,6 +189,7 @@ class RolloutStorage(object):
             return self.obs[idx]
 
     def set_obs(self, obs: ObsTensor, step: int) -> None:
+        obs = to_tensor(obs)
         if self.is_dict_obs:
             [self.obs[k][step].copy_(obs[k]) for k in self.obs.keys()]
         else:
@@ -233,6 +234,7 @@ class RolloutStorage(object):
         if bad_masks is None:
             bad_masks = torch.ones_like(masks)
 
+        obs = to_tensor(obs)
         if self.is_dict_obs:
             [self.obs[k][self.step + 1].copy_(obs[k]) for k in self.obs.keys()]
         else:
