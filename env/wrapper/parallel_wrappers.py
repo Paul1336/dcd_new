@@ -67,7 +67,11 @@ def worker(remote, parent_remote, env_fn_wrappers):
             elif cmd == 'max_steps':
                 remote.send(envs[0].max_steps)
             elif cmd == 'render':
-                remote.send([env.render(mode='level') for env in envs])
+                try:
+                    imgs = [env.render(mode='level') for env in envs]
+                except Exception:
+                    imgs = [None for _ in envs]
+                remote.send(imgs)
             elif cmd == 'render_to_screen':
                 remote.send([envs[0].render('human')])
             elif cmd == 'close':
