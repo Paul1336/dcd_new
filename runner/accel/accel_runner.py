@@ -412,6 +412,17 @@ class ACCELRunner(Runner):
         ]
         new_int_seeds = [self._register_mutated_level(s) for s in new_str_seeds]
 
+        # --- broadcast mutated level configs to all workers ---
+        # PARAS is process-local: the worker that ran mutate_level() added the
+        # new config to its own copy, but other workers don't have it.
+        # Without this, PLR replay of a mutated level on a different worker
+        # raises KeyError: '<str_seed>' inside reset_to_level().
+        task_configs = [
+            self.venv.remote_attr('task_config', index=[i])[0][0]
+            for i in range(N)
+        ]
+        self.venv.broadcast_level_configs(list(zip(new_str_seeds, task_configs)))
+
         # --- register with PLR as unseen ---
         self.level_sampler.observe_external_unseen_sample(new_int_seeds)
 

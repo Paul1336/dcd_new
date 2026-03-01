@@ -98,6 +98,14 @@ def worker(remote, parent_remote, env_fn_wrappers):
                     if hasattr(env, '_elapsed_steps'):
                         env._elapsed_steps = 0
                 remote.send(result)
+            elif cmd == 'add_levels_to_paras':
+                # data: list of (str_seed, task_config) pairs
+                # Broadcast mutated level configs so any worker can reset_to_level
+                # even if it wasn't the one that called mutate_level().
+                from iphyre.simulator import PARAS as _PARAS
+                for str_seed, config in data:
+                    _PARAS[str_seed] = config
+                remote.send(True)
             elif cmd == 'max_episode_steps':
                 max_episode_steps = get_env_attr(envs[0], '_max_episode_steps')
                 remote.send(max_episode_steps)
@@ -377,6 +385,23 @@ class ParallelAdversarialVecEnv(SubprocVecEnv):
         self.waiting = False
         obs = _flatten_list(obs)
         return _flatten_obs(obs)
+
+    def broadcast_level_configs(self, level_configs):
+        """Send (str_seed, task_config) pairs to every worker process.
+
+        After mutate_level(), only the worker that performed the mutation has
+        the new config in its local PARAS dict.  Call this so that PLR can
+        replay the mutated level on *any* worker without a KeyError.
+
+        Args:
+            level_configs: list of (str_seed, task_config) pairs.
+        """
+        self._assert_not_closed()
+        for remote in self.remotes:
+            remote.send(('add_levels_to_paras', level_configs))
+        self.waiting = True
+        [remote.recv() for remote in self.remotes]
+        self.waiting = False
 
     # observation_space
     def get_observation_space(self):
