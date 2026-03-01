@@ -71,6 +71,9 @@ PARAMS = {
     'test_num_episodes':                    1,
     'test_num_processes':                   1,
 
+    # Screenshots  (disabled: pygame.init() in subprocesses blocks on headless servers)
+    'screenshot_interval':                  0,
+
     # Logging
     'log_interval':                         1,
     'log_plr_buffer_stats':                 True,
