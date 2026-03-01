@@ -1,4 +1,5 @@
 from .sfl.sfl_runner import SFLRunner
+from .accel.accel_runner import ACCELRunner
 from .runner import AgentRole
 
 
@@ -16,6 +17,17 @@ def create_runner(
     if args.ued_algo in ('sfl', 'old_sfl', 'domain_randomization'):
         agents = {AgentRole.AGENT: agent}
         return SFLRunner(
+            args=args,
+            venv=venv,
+            agents=agents,
+            ued_venv=ued_venv,
+            train=train,
+        )
+    elif args.ued_algo == 'accel':
+        agents = {AgentRole.AGENT: agent}
+        if getattr(args, 'use_accel_paired', False) and adversary_agent is not None:
+            agents[AgentRole.ADVERSARY_AGENT] = adversary_agent
+        return ACCELRunner(
             args=args,
             venv=venv,
             agents=agents,

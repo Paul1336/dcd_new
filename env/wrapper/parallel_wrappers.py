@@ -92,6 +92,12 @@ def worker(remote, parent_remote, env_fn_wrappers):
                 remote.send([ob])
             elif cmd == 'reset_alp_gmm':
                 remote.send([envs[0].reset_alp_gmm(data)])
+            elif cmd == 'mutate_level':
+                result = [env.mutate_level(data) for env in envs]
+                for env in envs:
+                    if hasattr(env, '_elapsed_steps'):
+                        env._elapsed_steps = 0
+                remote.send(result)
             elif cmd == 'max_episode_steps':
                 max_episode_steps = get_env_attr(envs[0], '_max_episode_steps')
                 remote.send(max_episode_steps)
