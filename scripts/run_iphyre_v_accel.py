@@ -73,6 +73,9 @@ PARAMS = {
     'test_num_episodes':                    20,
     'test_num_processes':                   1,
 
+    # Screenshots
+    'screenshot_interval':                  0,
+
     # Logging
     'log_interval':                         1,
     'log_plr_buffer_stats':                 True,
@@ -91,6 +94,7 @@ TEST_OVERRIDES = {
     'test_interval':                        2,
     'test_num_episodes':                    1,
     'vlm_env_max_tasks':                    20,
+    'screenshot_interval':                  0,
 }
 
 BASE_SEED  = 88
