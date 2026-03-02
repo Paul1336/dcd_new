@@ -193,6 +193,9 @@ class Evaluator:
             if all(len(episodic_returns[name]) >= self.num_episodes for name in env_names):
                 break
 
+        envs.close()
+        self._opened_envs.remove(envs)
+
         results = {}
         for env_name in env_names:
             returns = np.array(episodic_returns[env_name])
