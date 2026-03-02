@@ -21,11 +21,25 @@ def _apply_obs_wrappers(venv, args):
     return venv
 
 
+def _env_config(args) -> dict:
+    """Build the config dict passed to gym_make for iphyre envs.
+
+    When obs_type="embedding" the env must produce image observations so that
+    VecCLIPEmbeddingWrapper has pixels to encode; pass state_type="image"
+    to switch the env's observation space from symbolic (122-dim) to (224,224,3).
+    """
+    if getattr(args, "obs_type", "symbolic") == "embedding":
+        return {"state_type": "image"}
+    return {}
+
+
 def _create_iphyre_adversarial_env(args):
     import env.benchmark.iphyre.adversarial  # noqa: F401 — triggers gym registrations
 
+    _config = _env_config(args)
+
     def make_env():
-        return gym_make(args.env_name)
+        return gym_make(args.env_name, config=_config)
 
     make_fns = [make_env for _ in range(args.num_processes)]
     try:
@@ -53,8 +67,10 @@ def _create_iphyre_vlm_env(args):
     if max_tasks > 0:
         env_names = env_names[:max_tasks]
 
+    _config = _env_config(args)
+
     def make_env():
-        return gym_make(args.env_name, env_names=env_names)
+        return gym_make(args.env_name, env_names=env_names, config=_config)
 
     make_fns = [make_env for _ in range(args.num_processes)]
     try:

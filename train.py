@@ -28,6 +28,7 @@ from util.filewriter import FileWriter
 from util.parser import Parser
 from util import make_plr_args, save_images
 from env import create_parallel_env
+from env.wrapper import VecCLIPEmbeddingWrapper
 from agent import create_agent
 from eval import create_evaluator
 from runner import create_runner
@@ -78,6 +79,10 @@ def train(args):
     except Exception :
         logging.exception(f"[EnvCreationError]")
         raise
+    # When obs_type="embedding", venv's outermost layer is VecCLIPEmbeddingWrapper.
+    # Extract its encoder so the evaluator and learnability eval can encode obs
+    # produced by plain Iphyre-Game-v0 (which has no CLIP wrapper of its own).
+    obs_encoder = venv._encode if isinstance(venv, VecCLIPEmbeddingWrapper) else None
     args.is_training_env = args.ued_algo in ['paired', 'flexible_paired', 'minimax']
     args.is_paired = args.ued_algo in ['paired', 'flexible_paired']
 
@@ -104,13 +109,14 @@ def train(args):
         runner = create_runner(
             args=args,
             venv=venv,
-            agent=agent, 
-            ued_venv=ued_venv, 
+            agent=agent,
+            ued_venv=ued_venv,
             adversary_agent=adversary_agent,
             adversary_env=adversary_env,
             train=True,
             plr_args=plr_args,
-            flexible_protagonist=False,)
+            flexible_protagonist=False,
+            obs_encoder=obs_encoder,)
     except Exception :
         logging.exception(f"[RunnerCreationError]")
         raise
@@ -119,7 +125,7 @@ def train(args):
     try:
         evaluator = None
         if args.test_env_names:
-            evaluator = create_evaluator(args=args)
+            evaluator = create_evaluator(args=args, obs_encoder=obs_encoder)
     except Exception :
         logging.exception(f"[EvaluatorCreationError]")
         raise

@@ -94,6 +94,9 @@ class VecCLIPEmbeddingWrapper(VecEnvWrapper):
     def reset_to_level_batch(self, level) -> np.ndarray:
         return self._encode(self.venv.reset_to_level_batch(level))
 
+    def mutate_level(self, num_edits) -> np.ndarray:
+        return self._encode(self.venv.mutate_level(num_edits))
+
     def step_wait(self):
         obs, rews, dones, infos = self.venv.step_wait()
         obs = self._encode(obs)

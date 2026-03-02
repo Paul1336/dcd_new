@@ -1,5 +1,5 @@
 import time
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 import torch
@@ -11,14 +11,17 @@ from interfaces import EvaluationStats
 from env.benchmark.iphyre.suites import load_test_suite
 
 
-def create_evaluator(args):
+def create_evaluator(args, obs_encoder: Optional[Callable] = None):
     test_suite_names = [x.strip() for x in args.test_env_names.split(",") if x.strip()]
+    env_config = {"state_type": "image"} if getattr(args, "obs_type", "symbolic") == "embedding" else {}
     return Evaluator(
         test_suite_names=test_suite_names,
         num_episodes=args.test_num_episodes,
         device=args.device,
         deterministic=getattr(args, "deterministic_eval", False),
         record_video=getattr(args, "record_video", False),
+        env_config=env_config,
+        obs_encoder=obs_encoder,
     )
 
 
@@ -29,6 +32,14 @@ class Evaluator:
     - Runs all envs in parallel via gym.vector.SyncVectorEnv (matching archive behaviour)
     - Calls agent.act(obs, rnn_hxs, masks, deterministic) — positional, returns 4-tuple
     - Returns EvaluationStats (compatible with train.py)
+
+    Args:
+        env_config: dict forwarded to gym_make as the `config` kwarg for each eval env.
+            When obs_type="embedding", pass {"state_type": "image"} so the env produces
+            (224,224,3) images that obs_encoder can process.
+        obs_encoder: optional callable np.ndarray [N,H,W,C] → np.ndarray [N,D].
+            Applied to raw observations before feeding the agent.  Required when
+            the agent was trained with CLIP embeddings.
     """
 
     def __init__(
@@ -38,6 +49,8 @@ class Evaluator:
         device: str = "cpu",
         deterministic: bool = False,
         record_video: bool = False,
+        env_config: Optional[Dict] = None,
+        obs_encoder: Optional[Callable] = None,
         **kwargs,
     ):
         self.test_suite_names = test_suite_names
@@ -45,6 +58,8 @@ class Evaluator:
         self.num_episodes = num_episodes
         self.deterministic = deterministic
         self.record_video = record_video
+        self.env_config = env_config or {}
+        self.obs_encoder = obs_encoder
         self.kwargs = kwargs
 
         first = test_suite_names[0] if test_suite_names else ""
@@ -103,6 +118,12 @@ class Evaluator:
 
     # ---------- internals ----------
 
+    def _encode_obs(self, obs: np.ndarray) -> torch.Tensor:
+        """Apply obs_encoder if present, then convert to float32 tensor."""
+        if self.obs_encoder is not None:
+            obs = self.obs_encoder(obs)
+        return torch.from_numpy(obs).to(dtype=torch.float32, device=self.device)
+
     @torch.no_grad()
     def _evaluate_parallel(
         self,
@@ -112,10 +133,16 @@ class Evaluator:
     ) -> Dict[str, Dict[str, float]]:
         """Run all envs in parallel via SyncVectorEnv; collect num_episodes per env."""
         n = len(env_names)
+        env_config = self.env_config
 
         def make_env_fn(env_name, env_task_config):
             def thunk():
-                env = gym_make("Iphyre-Game-v0", env_name=env_name, env_task_config=env_task_config)
+                env = gym_make(
+                    "Iphyre-Game-v0",
+                    env_name=env_name,
+                    env_task_config=env_task_config,
+                    config=env_config,
+                )
                 return RecordEpisodeStatistics(env)
             return thunk
 
@@ -127,8 +154,7 @@ class Evaluator:
         episodic_returns: Dict[str, List[float]] = {name: [] for name in env_names}
         episodic_return = torch.zeros(n)
 
-        obs = envs.reset()
-        obs = torch.from_numpy(obs).to(dtype=torch.float32, device=self.device)
+        obs = self._encode_obs(envs.reset())
 
         hidden_size = agent.recurrent_hidden_state_size
         rnn_hxs = torch.zeros(n, hidden_size, device=self.device)
@@ -141,7 +167,7 @@ class Evaluator:
 
             action_np = action.cpu().numpy()
             obs, reward, done, _ = envs.step(action_np)
-            obs = torch.from_numpy(obs).to(dtype=torch.float32, device=self.device)
+            obs = self._encode_obs(obs)
 
             episodic_return += torch.tensor(reward, dtype=torch.float32)
             masks = torch.tensor(
@@ -174,6 +200,8 @@ def evaluate_parallel_envs(
     num_episodes: int = 10,
     device: str = "cpu",
     solved_threshold: float = 0.9,
+    env_config: Optional[Dict] = None,
+    obs_encoder: Optional[Callable] = None,
 ) -> Dict[str, Dict[str, float]]:
     """
     Standalone wrapper used by SFLRunner._update_learnability_metrics.
@@ -183,6 +211,8 @@ def evaluate_parallel_envs(
         test_suite_names=[],
         num_episodes=num_episodes,
         device=device,
+        env_config=env_config or {},
+        obs_encoder=obs_encoder,
     )
     ev.solved_threshold = solved_threshold
     results = ev._evaluate_parallel(env_names, env_task_configs, agent)

@@ -13,6 +13,7 @@ def create_runner(
     train=True,
     plr_args=None,
     flexible_protagonist=False,
+    obs_encoder=None,
 ):
     if args.ued_algo in ('sfl', 'old_sfl', 'domain_randomization'):
         agents = {AgentRole.AGENT: agent}
@@ -22,6 +23,7 @@ def create_runner(
             agents=agents,
             ued_venv=ued_venv,
             train=train,
+            obs_encoder=obs_encoder,
         )
     elif args.ued_algo == 'accel':
         agents = {AgentRole.AGENT: agent}

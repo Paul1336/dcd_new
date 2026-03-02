@@ -12,7 +12,7 @@ from interfaces import SampledLevelInfo, RunnerStats, RolloutResult, RunnerState
 
 class SFLRunner(Runner):
 
-    def __init__(self, args, venv, agents, ued_venv=None, train=True):
+    def __init__(self, args, venv, agents, ued_venv=None, train=True, obs_encoder=None):
         super().__init__(
             args=args,
             venv=venv,
@@ -22,6 +22,7 @@ class SFLRunner(Runner):
         )
 
         self.agent = self.agents[AgentRole.AGENT]
+        self.obs_encoder = obs_encoder
 
         # mode
         if train:
@@ -124,6 +125,11 @@ class SFLRunner(Runner):
         chunk_size = 40
         chunks = [sampled_env_ids[i:i + chunk_size] for i in range(0, len(sampled_env_ids), chunk_size)]
 
+        env_config = (
+            {"state_type": "image"}
+            if getattr(self.args, "obs_type", "symbolic") == "embedding"
+            else {}
+        )
         for chunk in tqdm(chunks, desc="Updating learnability"):
             results = evaluate_parallel_envs(
                 env_names=chunk,
@@ -131,6 +137,8 @@ class SFLRunner(Runner):
                 agent=self.agent,
                 num_episodes=10,
                 device=self.device,
+                env_config=env_config,
+                obs_encoder=self.obs_encoder,
             )
             for env_id in chunk:
                 self.learnability_sampler.update_learnability(
