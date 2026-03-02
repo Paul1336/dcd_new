@@ -128,15 +128,13 @@ class SFLRunner(Runner):
         use_image_obs = getattr(self.args, "obs_type", "symbolic") == "embedding"
         env_config = {"state_type": "image"} if use_image_obs else {}
 
+        # PARAS is process-local in spawned subprocesses. Always fetch configs from
+        # the main-process PARAS so each subprocess can register the task in its own
+        # PARAS via IphyreGameEnv.__init__(env_task_config=...).
+        from iphyre.simulator import PARAS as _PARAS
+
         for chunk in tqdm(chunks, desc="Updating learnability"):
-            if use_image_obs:
-                # AsyncVectorEnv spawns subprocesses whose PARAS dicts are empty.
-                # Fetch configs from the main-process PARAS and pass them explicitly
-                # so IphyreGameEnv.__init__ populates PARAS in each subprocess.
-                from iphyre.simulator import PARAS as _PARAS
-                task_configs = [_PARAS.get(env_id) for env_id in chunk]
-            else:
-                task_configs = [None] * len(chunk)
+            task_configs = [_PARAS.get(env_id) for env_id in chunk]
 
             results = evaluate_parallel_envs(
                 env_names=chunk,
