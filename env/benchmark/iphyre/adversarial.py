@@ -231,6 +231,7 @@ class IphyreAdversarialEnv(gym.Env):
         elif self.state_type == "image":
             if not self.should_show_window:
                 os.environ["SDL_VIDEODRIVER"] = "dummy"
+                os.environ["SDL_AUDIODRIVER"] = "dummy"
             self.observation_space = Box(
                 low=0, high=255, shape=(224, 224, 3), dtype=np.uint8
             )
