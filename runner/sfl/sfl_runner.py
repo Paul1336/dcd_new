@@ -125,15 +125,22 @@ class SFLRunner(Runner):
         chunk_size = 40
         chunks = [sampled_env_ids[i:i + chunk_size] for i in range(0, len(sampled_env_ids), chunk_size)]
 
-        env_config = (
-            {"state_type": "image"}
-            if getattr(self.args, "obs_type", "symbolic") == "embedding"
-            else {}
-        )
+        use_image_obs = getattr(self.args, "obs_type", "symbolic") == "embedding"
+        env_config = {"state_type": "image"} if use_image_obs else {}
+
         for chunk in tqdm(chunks, desc="Updating learnability"):
+            if use_image_obs:
+                # AsyncVectorEnv spawns subprocesses whose PARAS dicts are empty.
+                # Fetch configs from the main-process PARAS and pass them explicitly
+                # so IphyreGameEnv.__init__ populates PARAS in each subprocess.
+                from iphyre.simulator import PARAS as _PARAS
+                task_configs = [_PARAS.get(env_id) for env_id in chunk]
+            else:
+                task_configs = [None] * len(chunk)
+
             results = evaluate_parallel_envs(
                 env_names=chunk,
-                env_task_configs=[None] * len(chunk),
+                env_task_configs=task_configs,
                 agent=self.agent,
                 num_episodes=10,
                 device=self.device,

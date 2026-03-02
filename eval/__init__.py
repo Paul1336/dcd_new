@@ -131,7 +131,18 @@ class Evaluator:
         env_task_configs: List[Any],
         agent,
     ) -> Dict[str, Dict[str, float]]:
-        """Run all envs in parallel via SyncVectorEnv; collect num_episodes per env."""
+        """Run all envs in parallel; collect num_episodes per env.
+
+        When obs_encoder is set (obs_type="embedding"), image observations are
+        produced by each env.  Rendering via pygame cannot run in the main
+        process because it already holds a CUDA context (CLIP + PPO), which
+        conflicts with pygame's display initialisation.  In that case we use
+        AsyncVectorEnv (spawned subprocesses) so every env gets its own clean
+        process — the same isolation as the training ParallelAdversarialVecEnv.
+        The main process receives raw images over pipes and CLIP-encodes them.
+
+        Without obs_encoder (symbolic obs) the original SyncVectorEnv is kept.
+        """
         n = len(env_names)
         env_config = self.env_config
 
@@ -146,9 +157,12 @@ class Evaluator:
                 return RecordEpisodeStatistics(env)
             return thunk
 
-        envs = gym.vector.SyncVectorEnv([
-            make_env_fn(name, cfg) for name, cfg in zip(env_names, env_task_configs)
-        ])
+        fns = [make_env_fn(name, cfg) for name, cfg in zip(env_names, env_task_configs)]
+        if self.obs_encoder is not None:
+            # Spawned subprocesses: each env has its own pygame / process space.
+            envs = gym.vector.AsyncVectorEnv(fns, context='spawn')
+        else:
+            envs = gym.vector.SyncVectorEnv(fns)
         self._opened_envs.append(envs)
 
         episodic_returns: Dict[str, List[float]] = {name: [] for name in env_names}
