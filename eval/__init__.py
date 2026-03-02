@@ -3,10 +3,9 @@ from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 import torch
-import gym
-from gym.wrappers.record_episode_statistics import RecordEpisodeStatistics
 
 from env.registration import make as gym_make
+from env.wrapper.parallel_wrappers import SubprocVecEnv
 from interfaces import EvaluationStats
 from env.benchmark.iphyre.suites import load_test_suite
 
@@ -133,36 +132,33 @@ class Evaluator:
     ) -> Dict[str, Dict[str, float]]:
         """Run all envs in parallel; collect num_episodes per env.
 
-        When obs_encoder is set (obs_type="embedding"), image observations are
-        produced by each env.  Rendering via pygame cannot run in the main
-        process because it already holds a CUDA context (CLIP + PPO), which
-        conflicts with pygame's display initialisation.  In that case we use
-        AsyncVectorEnv (spawned subprocesses) so every env gets its own clean
-        process — the same isolation as the training ParallelAdversarialVecEnv.
-        The main process receives raw images over pipes and CLIP-encodes them.
-
-        Without obs_encoder (symbolic obs) the original SyncVectorEnv is kept.
+        Uses SubprocVecEnv (the same worker used by training) for all obs types.
+        gym.vector.AsyncVectorEnv triggers a mandatory reset in __init__ to
+        populate its shared-memory observation buffer; this deadlocks with
+        iphyre envs because the forced reset races with pygame initialisation.
+        SubprocVecEnv defers all resets until the caller invokes envs.reset(),
+        avoiding the deadlock.
         """
         n = len(env_names)
         env_config = self.env_config
 
         def make_env_fn(env_name, env_task_config):
             def thunk():
-                env = gym_make(
+                return gym_make(
                     "Iphyre-Game-v0",
                     env_name=env_name,
                     env_task_config=env_task_config,
                     config=env_config,
                 )
-                return RecordEpisodeStatistics(env)
             return thunk
 
         fns = [make_env_fn(name, cfg) for name, cfg in zip(env_names, env_task_configs)]
-        if self.obs_encoder is not None:
-            # Spawned subprocesses: each env has its own pygame / process space.
-            envs = gym.vector.AsyncVectorEnv(fns, context='spawn')
-        else:
-            envs = gym.vector.SyncVectorEnv(fns)
+        # Use the project's own SubprocVecEnv (same worker that training uses).
+        # gym.vector.AsyncVectorEnv sends a mandatory reset during __init__ to
+        # populate shared memory, which deadlocks with the iphyre/pygame envs.
+        # SubprocVecEnv only queries one worker for spaces during __init__ and
+        # defers resets until the caller explicitly calls envs.reset().
+        envs = SubprocVecEnv(fns, is_eval=True)
         self._opened_envs.append(envs)
 
         episodic_returns: Dict[str, List[float]] = {name: [] for name in env_names}
