@@ -699,8 +699,7 @@ class Parser:
         )
         self.parser.add_argument(
             '--fake_clip',
-            action='store_true',
-            default=False,
+            type=str2bool, nargs='?', const=True, default=False,
             help=(
                 'Replace CLIP encoding with zero vectors of the same shape. '
                 'Useful for timing the pipeline without the CLIP forward-pass cost.'

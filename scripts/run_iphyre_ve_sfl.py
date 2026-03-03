@@ -144,11 +144,15 @@ if __name__ == '__main__':
     parser.add_argument('--log_dir',  type=str, default='~/logs/dcd/')
     parser.add_argument('--method',   type=str, default='Iphyre-VE-SFL')
     parser.add_argument('--exp_name', type=str, default='iphyre_ve_sfl')
-    parser.add_argument('--test',     action='store_true',
+    parser.add_argument('--test',      action='store_true',
                         help='Smoke-test mode: tiny dataset + few steps, 1 trial, no confirm prompt.')
+    parser.add_argument('--fake_clip', action='store_true',
+                        help='Replace CLIP with zero embeddings to benchmark pipeline timing.')
     args = parser.parse_args()
 
-    extra = TEST_OVERRIDES if args.test else None
+    extra = dict(TEST_OVERRIDES) if args.test else {}
+    if args.fake_clip:
+        extra['fake_clip'] = True
     num_trials = 1 if args.test else NUM_TRIALS
 
     cmds = [
