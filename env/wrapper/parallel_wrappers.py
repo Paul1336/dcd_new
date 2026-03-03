@@ -85,6 +85,12 @@ def worker(remote, parent_remote, env_fn_wrappers):
                     if hasattr(env, '_elapsed_steps'):
                         env._elapsed_steps = 0
                 remote.send(result)
+            elif cmd == 'reset_random':
+                result = [env.reset_random() for env in envs]
+                for env in envs:
+                    if hasattr(env, '_elapsed_steps'):
+                        env._elapsed_steps = 0
+                remote.send(result)
             elif cmd == 'reset_to_level':
                 ob = envs[0].reset_to_level(data)
                 if hasattr(envs[0], '_elapsed_steps'):

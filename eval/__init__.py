@@ -129,16 +129,28 @@ class Evaluator:
         env_names: List[str],
         env_task_configs: List[Any],
         agent,
+        chunk_size: int = 40,
     ) -> Dict[str, Dict[str, float]]:
-        """Run all envs in parallel; collect num_episodes per env.
+        """Run envs in parallel chunks; collect num_episodes per env.
 
-        Uses SubprocVecEnv (the same worker used by training) for all obs types.
-        gym.vector.AsyncVectorEnv triggers a mandatory reset in __init__ to
-        populate its shared-memory observation buffer; this deadlocks with
-        iphyre envs because the forced reset races with pygame initialisation.
-        SubprocVecEnv defers all resets until the caller invokes envs.reset(),
-        avoiding the deadlock.
+        Processes env_names in chunks of chunk_size to avoid spawning too many
+        subprocesses at once (resource exhaustion / deadlock with large suites).
         """
+        results = {}
+        for start in range(0, len(env_names), chunk_size):
+            chunk_names   = env_names[start : start + chunk_size]
+            chunk_configs = env_task_configs[start : start + chunk_size]
+            results.update(self._evaluate_chunk(chunk_names, chunk_configs, agent))
+        return results
+
+    @torch.no_grad()
+    def _evaluate_chunk(
+        self,
+        env_names: List[str],
+        env_task_configs: List[Any],
+        agent,
+    ) -> Dict[str, Dict[str, float]]:
+        """Evaluate one chunk of envs in parallel via SubprocVecEnv."""
         n = len(env_names)
         env_config = self.env_config
 
@@ -153,11 +165,6 @@ class Evaluator:
             return thunk
 
         fns = [make_env_fn(name, cfg) for name, cfg in zip(env_names, env_task_configs)]
-        # Use the project's own SubprocVecEnv (same worker that training uses).
-        # gym.vector.AsyncVectorEnv sends a mandatory reset during __init__ to
-        # populate shared memory, which deadlocks with the iphyre/pygame envs.
-        # SubprocVecEnv only queries one worker for spaces during __init__ and
-        # defers resets until the caller explicitly calls envs.reset().
         envs = SubprocVecEnv(fns, is_eval=True)
         self._opened_envs.append(envs)
 
