@@ -17,6 +17,7 @@ def _apply_obs_wrappers(venv, args):
             venv=venv,
             clip_model_name=getattr(args, "clip_model", "ViT-B/32"),
             clip_device=getattr(args, "clip_device", "cpu"),
+            fake=getattr(args, "fake_clip", False),
         )
     return venv
 

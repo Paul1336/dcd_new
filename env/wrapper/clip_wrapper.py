@@ -30,27 +30,37 @@ class VecCLIPEmbeddingWrapper(VecEnvWrapper):
         venv,
         clip_model_name: str = "ViT-B/32",
         clip_device: str = "cpu",
+        fake: bool = False,
     ):
         super().__init__(venv)
 
-        try:
-            import clip as openai_clip
-        except ImportError:
-            raise ImportError(
-                "The 'clip' package is required. "
-                "Install it with: pip install git+https://github.com/openai/CLIP.git"
+        self._fake = fake
+
+        if fake:
+            # Skip loading CLIP entirely; use a fixed embed_dim matching ViT-B/32.
+            _known_dims = {"ViT-B/32": 512, "ViT-B/16": 512, "ViT-L/14": 768}
+            embed_dim = _known_dims.get(clip_model_name, 512)
+            self._embed_dim = embed_dim
+        else:
+            try:
+                import clip as openai_clip
+            except ImportError:
+                raise ImportError(
+                    "The 'clip' package is required. "
+                    "Install it with: pip install git+https://github.com/openai/CLIP.git"
+                )
+
+            self._clip_device = torch.device(clip_device)
+            self._model, self._preprocess = openai_clip.load(
+                clip_model_name, device=self._clip_device
             )
+            self._model.eval()
 
-        self._clip_device = torch.device(clip_device)
-        self._model, self._preprocess = openai_clip.load(
-            clip_model_name, device=self._clip_device
-        )
-        self._model.eval()
-
-        # Infer embedding dimension via a dummy forward pass.
-        with torch.no_grad():
-            dummy = torch.zeros(1, 3, 224, 224, device=self._clip_device)
-            embed_dim = int(self._model.encode_image(dummy).shape[-1])
+            # Infer embedding dimension via a dummy forward pass.
+            with torch.no_grad():
+                dummy = torch.zeros(1, 3, 224, 224, device=self._clip_device)
+                embed_dim = int(self._model.encode_image(dummy).shape[-1])
+            self._embed_dim = embed_dim
 
         self.observation_space = gym.spaces.Box(
             low=-np.inf,
@@ -67,8 +77,11 @@ class VecCLIPEmbeddingWrapper(VecEnvWrapper):
             obs: np.ndarray [N, H, W, C] uint8 — batch of RGB images.
 
         Returns:
-            np.ndarray [N, D] float32 — CLIP visual embeddings.
+            np.ndarray [N, D] float32 — CLIP visual embeddings (or zeros if fake=True).
         """
+        if self._fake:
+            return np.zeros((len(obs), self._embed_dim), dtype=np.float32)
+
         from PIL import Image
 
         imgs = [self._preprocess(Image.fromarray(obs[i])) for i in range(len(obs))]

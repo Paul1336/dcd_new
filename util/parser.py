@@ -697,6 +697,15 @@ class Parser:
                 'Defaults to "cpu" to keep GPU memory free for the PPO network.'
             ),
         )
+        self.parser.add_argument(
+            '--fake_clip',
+            action='store_true',
+            default=False,
+            help=(
+                'Replace CLIP encoding with zero vectors of the same shape. '
+                'Useful for timing the pipeline without the CLIP forward-pass cost.'
+            ),
+        )
 
         self.parser.add_argument(
             '--value_model_path',
