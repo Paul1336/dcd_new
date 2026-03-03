@@ -1,5 +1,6 @@
 from .sfl.sfl_runner import SFLRunner
 from .accel.accel_runner import ACCELRunner
+from .plr.plr_runner import PLRRunner
 from .runner import AgentRole
 
 
@@ -24,6 +25,15 @@ def create_runner(
             ued_venv=ued_venv,
             train=train,
             obs_encoder=obs_encoder,
+        )
+    elif args.ued_algo == 'plr':
+        agents = {AgentRole.AGENT: agent}
+        return PLRRunner(
+            args=args,
+            venv=venv,
+            agents=agents,
+            ued_venv=ued_venv,
+            train=train,
         )
     elif args.ued_algo == 'accel':
         agents = {AgentRole.AGENT: agent}

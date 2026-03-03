@@ -9,6 +9,14 @@ from interfaces import SampledLevelInfo, RunnerStats, RolloutResult, RunnerState
 from util import make_plr_args
 
 
+_VLM_ENV_NAMES = frozenset({
+    'Iphyre-AdversarialVLM4k-v0',
+    'Iphyre-AdversarialVLM10k-v0',
+    'Iphyre-AdversarialClaudeVLM10k-v0',
+    'Iphyre-AdversarialGeminiVLM10k-v0',
+})
+
+
 class ACCELRunner(Runner):
     """
     ACCEL runner: PLR curriculum + level editing.
@@ -42,12 +50,20 @@ class ACCELRunner(Runner):
         self.agent = self.agents[AgentRole.AGENT]
         self.adversary_agent = self.agents.get(AgentRole.ADVERSARY_AGENT)
 
+        self._vlm_mode = args.env_name in _VLM_ENV_NAMES
+
         # ---- int seed <-> str level_id mapping ----
-        env_names = venv.remote_attr('subsampled_env_ids', index=[0])[0][0]
-        self._vlm_env_names = list(env_names)
-        self.seed2level_id: dict = {i: env_id for i, env_id in enumerate(env_names)}
-        self.level_id2seed: dict = {env_id: i for i, env_id in enumerate(env_names)}
-        self._next_mut_seed: int = len(env_names)   # counter for mutated level ids
+        if self._vlm_mode:
+            env_names = venv.remote_attr('subsampled_env_ids', index=[0])[0][0]
+            self._vlm_env_names = list(env_names)
+            self.seed2level_id: dict = {i: env_id for i, env_id in enumerate(env_names)}
+            self.level_id2seed: dict = {env_id: i for i, env_id in enumerate(env_names)}
+        else:
+            # Procedural: dynamic mapping grows during training
+            self._vlm_env_names = []
+            self.seed2level_id: dict = {}
+            self.level_id2seed: dict = {}
+        self._next_mut_seed: int = len(self.seed2level_id)  # 0 for procedural
 
         # ---- PLR level sampler ----
         plr_kwargs = make_plr_args(args, venv.observation_space, venv.action_space)
@@ -135,9 +151,12 @@ class ACCELRunner(Runner):
             obs[i] = x
 
     def _sample_new_level_int_seed(self) -> int:
-        """Randomly pick from the initial VLM task pool."""
-        env_id = random.choice(self._vlm_env_names)
-        return self.level_id2seed[env_id]
+        """Randomly pick a level int seed from the known pool."""
+        if self._vlm_mode:
+            env_id = random.choice(self._vlm_env_names)
+            return self.level_id2seed[env_id]
+        else:
+            return random.choice(list(self.seed2level_id.keys()))
 
     def _should_edit_level(self) -> bool:
         return self.use_editor and (np.random.rand() < self.edit_prob)
@@ -170,17 +189,24 @@ class ACCELRunner(Runner):
 
         if level_replay:
             int_seeds = [self.level_sampler.sample_replay_level() for _ in range(N)]
-        else:
+            level_ids = [self.seed2level_id[s] for s in int_seeds]
+            self.venv.reset_to_level_batch(level_ids)
+            obs = self.venv.reset_agent()
+        elif self._vlm_mode:
             int_seeds = [self._sample_new_level_int_seed() for _ in range(N)]
+            self.level_sampler.observe_external_unseen_sample(int_seeds)
+            level_ids = [self.seed2level_id[s] for s in int_seeds]
+            self.venv.reset_to_level_batch(level_ids)
+            obs = self.venv.reset_agent()
+        else:
+            # Procedural: discover N new levels via random reset
+            obs = self.venv.reset_random()
+            encodings = [self.venv.remote_attr('encoding', index=[i])[0][0] for i in range(N)]
+            int_seeds = [self._register_mutated_level(enc) for enc in encodings]
             self.level_sampler.observe_external_unseen_sample(int_seeds)
 
         self.current_int_seeds = list(int_seeds)
-        level_ids = [self.seed2level_id[s] for s in int_seeds]
-
-        self.venv.reset_to_level_batch(level_ids)
         self.total_seeds_collected += N
-
-        obs = self.venv.reset_agent()
         self.agent.storage.set_obs(obs, 0)
         rollout_returns = [[] for _ in range(N)]
 
@@ -226,8 +252,11 @@ class ACCELRunner(Runner):
                     # sample next level
                     if level_replay:
                         new_int_seed = self.level_sampler.sample_replay_level()
-                    else:
+                    elif self._vlm_mode:
                         new_int_seed = self._sample_new_level_int_seed()
+                    else:
+                        # Procedural: replay from known pool
+                        new_int_seed = random.choice(list(self.seed2level_id.keys()))
 
                     new_level_id = self.seed2level_id[new_int_seed]
                     obs_i = self.venv.reset_to_level(new_level_id, i)

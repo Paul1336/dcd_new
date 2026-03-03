@@ -6,7 +6,7 @@ import sys
 PARAMS = {
     # Env
     'env_name':                             'Iphyre-AdversarialVLM4k-v0',
-    'ued_algo':                             'accel',
+    'ued_algo':                             'plr',
 
     # Rollout / PPO
     'num_processes':                        64,
@@ -42,7 +42,7 @@ PARAMS = {
     'checkpoint':                           True,
     'checkpoint_basis':                     'student_grad_updates',
 
-    # PLR (used by ACCEL's LevelSampler)
+    # PLR (level replay curriculum)
     'level_replay_strategy':                'value_l1',
     'level_replay_schedule':                'proportionate',
     'level_replay_score_transform':         'rank',
@@ -57,14 +57,6 @@ PARAMS = {
     'train_full_distribution':              True,
     'level_replay_seed_buffer_size':        4000,
     'level_replay_seed_buffer_priority':    'replay_support',
-
-    # ACCEL level editing
-    'use_editor':                           True,
-    'level_editor_prob':                    0.5,
-    'level_editor_method':                  'random',
-    'base_levels':                          'easy',
-    'num_edits':                            1,
-    'use_accel_paired':                     False,
 
     # Evaluation
     'test_env_names':                       'Iphyre-HandDesign-v0,Iphyre-ProceduralRotate-v0,Iphyre-ProceduralShift-v0,Iphyre-VLMGeneratedRotate-v0,Iphyre-VLMGeneratedShift-v0',
@@ -162,9 +154,9 @@ if __name__ == '__main__':
     parser.add_argument('--device',        type=str, default='cuda:0')
     parser.add_argument('--log_dir',       type=str, default='~/logs/dcd/')
     parser.add_argument('--method',        type=str, default=None,
-                        help='W&B method tag. Defaults to Iphyre-{V,VE,P}-ACCEL.')
+                        help='W&B method tag. Defaults to Iphyre-{V,VE,P}-PLR.')
     parser.add_argument('--exp_name',      type=str, default=None,
-                        help='Experiment name. Defaults to iphyre_{v,ve,p}_accel.')
+                        help='Experiment name. Defaults to iphyre_{v,ve,p}_plr.')
     parser.add_argument('--test',          action='store_true',
                         help='Smoke-test: tiny dataset + few steps, 1 trial, no confirm prompt.')
     parser.add_argument('--procedural',    action='store_true',
@@ -182,9 +174,9 @@ if __name__ == '__main__':
     else:
         variant = 'V'
     if args.method is None:
-        args.method = f'Iphyre-{variant}-ACCEL'
+        args.method = f'Iphyre-{variant}-PLR'
     if args.exp_name is None:
-        args.exp_name = f'iphyre_{variant.lower()}_accel'
+        args.exp_name = f'iphyre_{variant.lower()}_plr'
 
     num_trials = 1 if args.test else NUM_TRIALS
 

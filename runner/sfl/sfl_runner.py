@@ -35,12 +35,18 @@ class SFLRunner(Runner):
         self.reset()
 
         # --- learnability sampler ---
+        self._vlm_mode = args.env_name in {
+            'Iphyre-AdversarialVLM4k-v0', 'Iphyre-AdversarialVLM10k-v0',
+            'Iphyre-AdversarialClaudeVLM10k-v0', 'Iphyre-AdversarialGeminiVLM10k-v0',
+        }
         self.learnability_sampler = LearnabilitySampler(
             venv=venv,
             learnability_alpha=args.learnability_alpha,
             learnability_c=args.learnability_c,
             top_k_to_sample_uniformly=args.top_k_to_sample_uniformly,
             staleness=args.learnability_staleness,
+            env_name=args.env_name,
+            max_pool_size=args.learnability_buffer_size,
         )
 
         # --- bookkeeping ---
@@ -134,7 +140,13 @@ class SFLRunner(Runner):
         from iphyre.simulator import PARAS as _PARAS
 
         for chunk in tqdm(chunks, desc="Updating learnability"):
-            task_configs = [_PARAS.get(env_id) for env_id in chunk]
+            if self._vlm_mode:
+                # VLM: env_id is a task name, config lives in PARAS.
+                task_configs = [_PARAS.get(env_id) for env_id in chunk]
+            else:
+                # Procedural: encoding = json.dumps(task_config) + '@@' + str(seed).
+                # Extract the config directly from the encoding string.
+                task_configs = [json.loads(env_id.split('@@')[0]) for env_id in chunk]
 
             results = evaluate_parallel_envs(
                 env_names=chunk,
@@ -173,16 +185,56 @@ class SFLRunner(Runner):
     # -------------------------
     # rollout
     # -------------------------
-    def _agent_rollout(self, num_steps: int, update: bool = True)-> RolloutResult:
+    def _reset_rollout_levels(self, N: int):
+        """
+        Pick initial levels for a rollout and reset envs.
+
+        VLM mode   : sample from LearnabilitySampler (fixed pool).
+        Procedural : reset_random() to discover new levels, then register them;
+                     falls back to reset_random() whenever the pool is too small.
+
+        Returns (initial_level_ids, obs).
+        """
+        if self._vlm_mode:
+            initial_levels = [self.learnability_sampler.sample() for _ in range(N)]
+            self.venv.reset_to_level_batch(initial_levels)
+            obs = self.venv.reset_agent()
+        else:
+            # Sample from pool if it has enough levels; otherwise discover new ones.
+            if len(self.learnability_sampler.env_names) >= N:
+                initial_levels = [self.learnability_sampler.sample() for _ in range(N)]
+                # sample() may return None if pool is empty (shouldn't happen here)
+                if any(l is None for l in initial_levels):
+                    obs = self.venv.reset_random()
+                    encodings = [
+                        self.venv.remote_attr('encoding', index=[i])[0][0]
+                        for i in range(N)
+                    ]
+                    for enc in encodings:
+                        self.learnability_sampler.register_level(enc)
+                    initial_levels = encodings
+                else:
+                    self.venv.reset_to_level_batch(initial_levels)
+                    obs = self.venv.reset_agent()
+            else:
+                obs = self.venv.reset_random()
+                encodings = [
+                    self.venv.remote_attr('encoding', index=[i])[0][0]
+                    for i in range(N)
+                ]
+                for enc in encodings:
+                    self.learnability_sampler.register_level(enc)
+                initial_levels = encodings
+        return initial_levels, obs
+
+    def _agent_rollout(self, num_steps: int, update: bool = True) -> RolloutResult:
         args = self.args
-        # 
-        initial_levels = [self.learnability_sampler.sample() for _ in range(args.num_processes)]
-        self.venv.reset_to_level_batch(initial_levels)
-        self.total_seeds_collected += args.num_processes
+        N = args.num_processes
+
+        initial_levels, obs = self._reset_rollout_levels(N)
+        self.total_seeds_collected += N
 
         levels_history = [[lvl] for lvl in initial_levels]   # list[list[level_id]]
-
-        obs = self.venv.reset_agent()
         self.agent.storage.set_obs(obs, 0)
         rollout_returns = [[] for _ in range(args.num_processes)]
 

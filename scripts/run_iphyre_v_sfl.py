@@ -3,7 +3,6 @@ import subprocess
 import sys
 
 
-# Hyperparameters from iphyre_v_sfl.json
 PARAMS = {
     # Env
     'env_name':                             'Iphyre-AdversarialVLM4k-v0',
@@ -68,6 +67,21 @@ PARAMS = {
     'log_grad_norm':                        True,
 }
 
+# Applied when --procedural is set: use procedural env instead of VLM-generated levels.
+PROCEDURAL_OVERRIDES = {
+    'env_name':                     'Iphyre-Adversarial-v0',
+    'learnability_staleness':       0.5,
+    'top_k_to_sample_uniformly':    100,
+}
+
+# Applied on top of PARAMS when --vlm_embedding is set.
+# clip_device is set dynamically (GPU normally, CPU in --test mode).
+EMBEDDING_OVERRIDES = {
+    'obs_type':   'embedding',
+    'clip_model': 'ViT-B/32',
+}
+
+# Applied on top of (PARAMS + optional EMBEDDING_OVERRIDES) when --test is set.
 TEST_OVERRIDES = {
     'num_processes':                        2,
     'num_env_steps':                        2048,
@@ -86,10 +100,19 @@ BASE_SEED  = 88
 NUM_TRIALS = 3
 
 
-def build_cmd(seed, device, log_dir, method, exp_name, extra_params=None):
+def build_cmd(seed, device, log_dir, method, exp_name,
+              procedural=False, vlm_embedding=False, test=False, fake_clip=False):
     params = dict(PARAMS)
-    if extra_params:
-        params.update(extra_params)
+    if procedural:
+        params.update(PROCEDURAL_OVERRIDES)
+    if vlm_embedding:
+        params.update(EMBEDDING_OVERRIDES)
+        # Use CPU for CLIP in test/smoke mode to avoid contention; GPU otherwise.
+        params['clip_device'] = 'cpu' if test else device
+    if test:
+        params.update(TEST_OVERRIDES)
+    if fake_clip:
+        params['fake_clip'] = True
     cmd = ['python', 'train.py']
     for k, v in params.items():
         cmd.append(f'--{k}={v}')
@@ -128,15 +151,33 @@ def run_parallel(cmds):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--device',   type=str, default='cuda:0')
-    parser.add_argument('--log_dir',  type=str, default='~/logs/dcd/')
-    parser.add_argument('--method',   type=str, default='Iphyre-V-SFL')
-    parser.add_argument('--exp_name', type=str, default='iphyre_v_sfl')
-    parser.add_argument('--test',     action='store_true',
-                        help='Smoke-test mode: tiny dataset + few steps, 1 trial, no confirm prompt.')
+    parser.add_argument('--device',        type=str, default='cuda:0')
+    parser.add_argument('--log_dir',       type=str, default='~/logs/dcd/')
+    parser.add_argument('--method',        type=str, default=None,
+                        help='W&B method tag. Defaults to Iphyre-{V,VE,P}-SFL.')
+    parser.add_argument('--exp_name',      type=str, default=None,
+                        help='Experiment name. Defaults to iphyre_{v,ve,p}_sfl.')
+    parser.add_argument('--test',          action='store_true',
+                        help='Smoke-test: tiny dataset + few steps, 1 trial, no confirm prompt.')
+    parser.add_argument('--procedural',    action='store_true',
+                        help='Use procedural env (Iphyre-Adversarial-v0) instead of VLM-generated levels.')
+    parser.add_argument('--vlm_embedding', action='store_true',
+                        help='Use frozen CLIP image embeddings instead of symbolic observations.')
+    parser.add_argument('--fake_clip',     action='store_true',
+                        help='Replace CLIP with zero embeddings for timing (requires --vlm_embedding).')
     args = parser.parse_args()
 
-    extra = TEST_OVERRIDES if args.test else None
+    if args.procedural:
+        variant = 'P'
+    elif args.vlm_embedding:
+        variant = 'VE'
+    else:
+        variant = 'V'
+    if args.method is None:
+        args.method = f'Iphyre-{variant}-SFL'
+    if args.exp_name is None:
+        args.exp_name = f'iphyre_{variant.lower()}_sfl'
+
     num_trials = 1 if args.test else NUM_TRIALS
 
     cmds = [
@@ -146,13 +187,25 @@ if __name__ == '__main__':
             log_dir=args.log_dir,
             method=args.method,
             exp_name=args.exp_name,
-            extra_params=extra,
+            procedural=args.procedural,
+            vlm_embedding=args.vlm_embedding,
+            test=args.test,
+            fake_clip=args.fake_clip,
         )
         for i in range(num_trials)
     ]
 
-    # Print all commands before running
-    mode_label = ' [TEST MODE]' if args.test else ''
+    mode_parts = []
+    if args.test:
+        mode_parts.append('TEST')
+    if args.procedural:
+        mode_parts.append('Procedural')
+    if args.vlm_embedding:
+        mode_parts.append('VLM-Embedding')
+    if args.fake_clip:
+        mode_parts.append('fake-CLIP')
+    mode_label = f' [{", ".join(mode_parts)}]' if mode_parts else ''
+
     print(f'=== {num_trials} trial(s) (seeds {BASE_SEED}–{BASE_SEED + num_trials - 1}){mode_label} ===\n')
     for i, cmd in enumerate(cmds):
         print(f'[Trial {i}] seed={BASE_SEED + i}')
