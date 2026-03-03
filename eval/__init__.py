@@ -135,7 +135,11 @@ class Evaluator:
 
         Processes env_names in chunks of chunk_size to avoid spawning too many
         subprocesses at once (resource exhaustion / deadlock with large suites).
+        In VE (embedding) mode each subprocess sends raw 224x224x3 frames through
+        the pipe; cap to 10 to stay within the OS pipe-buffer limit.
         """
+        if self.obs_encoder is not None:
+            chunk_size = min(chunk_size, 10)
         results = {}
         for start in range(0, len(env_names), chunk_size):
             chunk_names   = env_names[start : start + chunk_size]
