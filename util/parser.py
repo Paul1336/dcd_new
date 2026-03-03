@@ -191,7 +191,7 @@ class Parser:
             default='paired',
             choices=['domain_randomization', 'minimax',
                     'paired', 'flexible_paired',
-                    'alp_gmm', 'sfl', 'old_sfl', 'accel'],
+                    'alp_gmm', 'sfl', 'old_sfl', 'plr', 'accel'],
             help='UED algorithm')
         self.parser.add_argument(
             '--protagonist_plr',
