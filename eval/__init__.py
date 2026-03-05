@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Any, Callable, Dict, List, Optional
 
@@ -134,12 +135,11 @@ class Evaluator:
         """Run envs in parallel chunks; collect num_episodes per env.
 
         Processes env_names in chunks of chunk_size to avoid spawning too many
-        subprocesses at once (resource exhaustion / deadlock with large suites).
-        In VE (embedding) mode each subprocess sends raw 224x224x3 frames through
-        the pipe; cap to 10 to stay within the OS pipe-buffer limit.
+        subprocesses at once.  CUDA_VISIBLE_DEVICES is blanked before spawning
+        eval workers (they only need CPU for iphyre/pygame), which keeps spawn
+        time ~2 s instead of ~30 s and prevents resource-contention deadlocks
+        when many workers initialise CUDA simultaneously.
         """
-        if self.obs_encoder is not None:
-            chunk_size = min(chunk_size, 10)
         results = {}
         for start in range(0, len(env_names), chunk_size):
             chunk_names   = env_names[start : start + chunk_size]
@@ -169,7 +169,20 @@ class Evaluator:
             return thunk
 
         fns = [make_env_fn(name, cfg) for name, cfg in zip(env_names, env_task_configs)]
-        envs = SubprocVecEnv(fns, is_eval=True)
+
+        # Blank CUDA_VISIBLE_DEVICES so eval workers skip CUDA/tensorflow init
+        # (~2 s spawn vs ~30 s) and don't deadlock when many start concurrently.
+        # Restored immediately after the VecEnv is constructed.
+        _old_cuda = os.environ.get('CUDA_VISIBLE_DEVICES')
+        os.environ['CUDA_VISIBLE_DEVICES'] = ''
+        try:
+            envs = SubprocVecEnv(fns, is_eval=True)
+        finally:
+            if _old_cuda is None:
+                os.environ.pop('CUDA_VISIBLE_DEVICES', None)
+            else:
+                os.environ['CUDA_VISIBLE_DEVICES'] = _old_cuda
+
         self._opened_envs.append(envs)
 
         episodic_returns: Dict[str, List[float]] = {name: [] for name in env_names}

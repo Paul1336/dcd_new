@@ -76,7 +76,7 @@ PARAMS = {
 }
 
 PROCEDURAL_OVERRIDES = {
-    'env_name': 'Iphyre-Adversarial-v0',
+    'env_name':         'Iphyre-Adversarial-v0',
 }
 
 EMBEDDING_OVERRIDES = {
