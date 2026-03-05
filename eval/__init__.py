@@ -1,11 +1,11 @@
 import time
 from typing import Any, Callable, Dict, List, Optional
 
-import gym
 import numpy as np
 import torch
 
 from env.registration import make as gym_make
+from env.wrapper.parallel_wrappers import SubprocVecEnv
 from interfaces import EvaluationStats
 from env.benchmark.iphyre.suites import load_test_suite
 
@@ -129,10 +129,20 @@ class Evaluator:
         env_names: List[str],
         env_task_configs: List[Any],
         agent,
-        chunk_size: int = None,
+        chunk_size: int = 15,
     ) -> Dict[str, Dict[str, float]]:
-        """Evaluate all envs via a single SyncVectorEnv (matching archive behaviour)."""
-        return self._evaluate_chunk(env_names, env_task_configs, agent)
+        """Run envs in parallel chunks of chunk_size via SubprocVecEnv.
+
+        Capped at 15 concurrent workers: empirically stable; >15 causes
+        resource-contention hangs when many spawn-context workers initialise
+        simultaneously.
+        """
+        results = {}
+        for start in range(0, len(env_names), chunk_size):
+            chunk_names   = env_names[start : start + chunk_size]
+            chunk_configs = env_task_configs[start : start + chunk_size]
+            results.update(self._evaluate_chunk(chunk_names, chunk_configs, agent))
+        return results
 
     @torch.no_grad()
     def _evaluate_chunk(
@@ -141,12 +151,6 @@ class Evaluator:
         env_task_configs: List[Any],
         agent,
     ) -> Dict[str, Dict[str, float]]:
-        """Evaluate envs in-process via gym.vector.SyncVectorEnv.
-
-        All envs run sequentially inside the main process — no subprocess
-        spawning, no pipe overhead, no CUDA-init races.  This matches the
-        original archive/eval.py behaviour.
-        """
         n = len(env_names)
         env_config = self.env_config
 
@@ -161,7 +165,7 @@ class Evaluator:
             return thunk
 
         fns = [make_env_fn(name, cfg) for name, cfg in zip(env_names, env_task_configs)]
-        envs = gym.vector.SyncVectorEnv(fns)
+        envs = SubprocVecEnv(fns, is_eval=True)
         self._opened_envs.append(envs)
 
         episodic_returns: Dict[str, List[float]] = {name: [] for name in env_names}
