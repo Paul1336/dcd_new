@@ -43,7 +43,7 @@ def train(args):
     import multiprocessing as mp
     try:
         _fs_ctx = mp.get_context('forkserver')
-        _p = _fs_ctx.Process(target=lambda: None)
+        _p = _fs_ctx.Process(target=int)   # int() is picklable; lambda is not
         _p.start(); _p.join()
     except ValueError:
         pass  # forkserver not available on this platform (e.g. Windows)
