@@ -37,6 +37,17 @@ from interfaces import SampledLevelInfo, FullObservation, RunnerStats, Evaluatio
 def train(args):
     os.environ["OMP_NUM_THREADS"] = "1"
 
+    # Pre-start the forkserver before CUDA is initialised.
+    # Eval workers (SubprocVecEnv with context='forkserver') will be forked from
+    # this clean server process, not from the CUDA-polluted main process.
+    import multiprocessing as mp
+    try:
+        _fs_ctx = mp.get_context('forkserver')
+        _p = _fs_ctx.Process(target=lambda: None)
+        _p.start(); _p.join()
+    except ValueError:
+        pass  # forkserver not available on this platform (e.g. Windows)
+
     # === Set random seed ===
     random.seed(args.seed)
     np.random.seed(args.seed)

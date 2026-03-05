@@ -129,13 +129,14 @@ class Evaluator:
         env_names: List[str],
         env_task_configs: List[Any],
         agent,
-        chunk_size: int = 15,
+        chunk_size: int = 50,
     ) -> Dict[str, Dict[str, float]]:
         """Run envs in parallel chunks of chunk_size via SubprocVecEnv.
 
-        Capped at 15 concurrent workers: empirically stable; >15 causes
-        resource-contention hangs when many spawn-context workers initialise
-        simultaneously.
+        Workers use context='forkserver' so they are forked from the pre-CUDA
+        forkserver process rather than the CUDA-initialised main process.
+        chunk_size=50 is a practical limit on concurrent workers; increase if
+        the host has enough file descriptors / memory.
         """
         results = {}
         for start in range(0, len(env_names), chunk_size):
@@ -165,7 +166,7 @@ class Evaluator:
             return thunk
 
         fns = [make_env_fn(name, cfg) for name, cfg in zip(env_names, env_task_configs)]
-        envs = SubprocVecEnv(fns, is_eval=True)
+        envs = SubprocVecEnv(fns, context='forkserver', is_eval=True)
         self._opened_envs.append(envs)
 
         episodic_returns: Dict[str, List[float]] = {name: [] for name in env_names}
