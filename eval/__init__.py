@@ -1,12 +1,11 @@
-import os
 import time
 from typing import Any, Callable, Dict, List, Optional
 
+import gym
 import numpy as np
 import torch
 
 from env.registration import make as gym_make
-from env.wrapper.parallel_wrappers import SubprocVecEnv
 from interfaces import EvaluationStats
 from env.benchmark.iphyre.suites import load_test_suite
 
@@ -130,22 +129,10 @@ class Evaluator:
         env_names: List[str],
         env_task_configs: List[Any],
         agent,
-        chunk_size: int = 40,
+        chunk_size: int = None,
     ) -> Dict[str, Dict[str, float]]:
-        """Run envs in parallel chunks; collect num_episodes per env.
-
-        Processes env_names in chunks of chunk_size to avoid spawning too many
-        subprocesses at once.  CUDA_VISIBLE_DEVICES is blanked before spawning
-        eval workers (they only need CPU for iphyre/pygame), which keeps spawn
-        time ~2 s instead of ~30 s and prevents resource-contention deadlocks
-        when many workers initialise CUDA simultaneously.
-        """
-        results = {}
-        for start in range(0, len(env_names), chunk_size):
-            chunk_names   = env_names[start : start + chunk_size]
-            chunk_configs = env_task_configs[start : start + chunk_size]
-            results.update(self._evaluate_chunk(chunk_names, chunk_configs, agent))
-        return results
+        """Evaluate all envs via a single SyncVectorEnv (matching archive behaviour)."""
+        return self._evaluate_chunk(env_names, env_task_configs, agent)
 
     @torch.no_grad()
     def _evaluate_chunk(
@@ -154,7 +141,12 @@ class Evaluator:
         env_task_configs: List[Any],
         agent,
     ) -> Dict[str, Dict[str, float]]:
-        """Evaluate one chunk of envs in parallel via SubprocVecEnv."""
+        """Evaluate envs in-process via gym.vector.SyncVectorEnv.
+
+        All envs run sequentially inside the main process — no subprocess
+        spawning, no pipe overhead, no CUDA-init races.  This matches the
+        original archive/eval.py behaviour.
+        """
         n = len(env_names)
         env_config = self.env_config
 
@@ -169,20 +161,7 @@ class Evaluator:
             return thunk
 
         fns = [make_env_fn(name, cfg) for name, cfg in zip(env_names, env_task_configs)]
-
-        # Blank CUDA_VISIBLE_DEVICES so eval workers skip CUDA/tensorflow init
-        # (~2 s spawn vs ~30 s) and don't deadlock when many start concurrently.
-        # Restored immediately after the VecEnv is constructed.
-        _old_cuda = os.environ.get('CUDA_VISIBLE_DEVICES')
-        os.environ['CUDA_VISIBLE_DEVICES'] = ''
-        try:
-            envs = SubprocVecEnv(fns, is_eval=True)
-        finally:
-            if _old_cuda is None:
-                os.environ.pop('CUDA_VISIBLE_DEVICES', None)
-            else:
-                os.environ['CUDA_VISIBLE_DEVICES'] = _old_cuda
-
+        envs = gym.vector.SyncVectorEnv(fns)
         self._opened_envs.append(envs)
 
         episodic_returns: Dict[str, List[float]] = {name: [] for name in env_names}
