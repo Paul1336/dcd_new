@@ -86,18 +86,15 @@ def _create_iphyre_vlm_env(args):
 
 
 def _create_multigrid_env(args):
-    import env.benchmark.minigrid  # noqa: F401 — triggers gym registrations
     from .wrapper import VecPreprocessImageWrapper
 
     def make_env():
+        import env.benchmark.minigrid  # noqa: F401 — triggers gym registrations in worker
         from .registration import make as _make
         return _make(args.env_name)
 
     make_fns = [make_env for _ in range(args.num_processes)]
-    try:
-        venv = ParallelAdversarialVecEnv(make_fns, adversary=False)
-    except Exception as e:
-        raise RuntimeError("[EnvInitError] Failed to create ParallelAdversarialVecEnv") from e
+    venv = ParallelAdversarialVecEnv(make_fns, adversary=False)
 
     venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
     venv = VecNormalize(venv=venv, ob=False, ret=args.normalize_returns)
