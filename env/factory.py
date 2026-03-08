@@ -85,6 +85,33 @@ def _create_iphyre_vlm_env(args):
     return venv, venv
 
 
+def _create_multigrid_env(args):
+    import env.benchmark.minigrid  # noqa: F401 — triggers gym registrations
+    from .wrapper import VecPreprocessImageWrapper
+
+    def make_env():
+        from .registration import make as _make
+        return _make(args.env_name)
+
+    make_fns = [make_env for _ in range(args.num_processes)]
+    try:
+        venv = ParallelAdversarialVecEnv(make_fns, adversary=False)
+    except Exception as e:
+        raise RuntimeError("[EnvInitError] Failed to create ParallelAdversarialVecEnv") from e
+
+    venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
+    venv = VecNormalize(venv=venv, ob=False, ret=args.normalize_returns)
+    # Scale pixel values and convert to channels-first (C, H, W)
+    venv = VecPreprocessImageWrapper(
+        venv,
+        obs_key='image',
+        transpose_order=[2, 0, 1],
+        scale=10.0,
+        device=getattr(args, 'device', None),
+    )
+    return venv, venv
+
+
 def create_parallel_env(args):
     if args.num_processes <= 0:
         raise ValueError(f"num_processes must be > 0, got {args.num_processes}")
@@ -93,6 +120,8 @@ def create_parallel_env(args):
         venv, ued_venv = _create_iphyre_vlm_env(args)
     elif args.env_name.startswith('Iphyre'):
         venv, ued_venv = _create_iphyre_adversarial_env(args)
+    elif args.env_name.startswith('MultiGrid'):
+        venv, ued_venv = _create_multigrid_env(args)
     else:
         raise ValueError(f"Unsupported env_name: {args.env_name}.")
 

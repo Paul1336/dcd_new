@@ -1,4 +1,5 @@
 from .iphyre import IphyreNetwork
+from .multigrid import MultigridNetwork
 
 
 def model_for_iphyre_agent(env, agent_type="agent", obs_type="symbolic", should_freeze_embedding=False):
@@ -11,6 +12,18 @@ def model_for_iphyre_agent(env, agent_type="agent", obs_type="symbolic", should_
         should_freeze_embedding=should_freeze_embedding)
 
 
+def model_for_multigrid_agent(env, agent_type="agent", recurrent_arch='lstm',
+                               recurrent_hidden_size=256):
+    if "adversary_env" in agent_type:
+        raise NotImplementedError("Adversary env not implemented for MultiGrid")
+    return MultigridNetwork(
+        observation_space=env.observation_space,
+        action_space=env.action_space,
+        recurrent_arch=recurrent_arch,
+        recurrent_hidden_size=recurrent_hidden_size,
+    )
+
+
 def build_model(env_name, env, agent_type="agent", **kwargs):
     """Return an actor-critic model for the given env."""
     if env_name.startswith("Iphyre"):
@@ -19,5 +32,11 @@ def build_model(env_name, env, agent_type="agent", **kwargs):
             agent_type=agent_type,
             obs_type=kwargs.get("obs_type", "symbolic"),
             should_freeze_embedding=kwargs.get("should_freeze_embedding", False))
+    elif env_name.startswith("MultiGrid"):
+        return model_for_multigrid_agent(
+            env=env,
+            agent_type=agent_type,
+            recurrent_arch=kwargs.get("recurrent_arch", "lstm"),
+            recurrent_hidden_size=kwargs.get("recurrent_hidden_size", 256))
     else:
         raise ValueError(f"Unsupported environment {env_name}.")
