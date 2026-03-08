@@ -7,7 +7,7 @@ import numpy as np
 import torch
 
 from ..runner import Runner, AgentRole
-from .learnability import LearnabilitySampler 
+from .learnability import LearnabilitySampler, _enc_key
 from interfaces import SampledLevelInfo, RunnerStats, RolloutResult, RunnerStateDict
 
 class SFLRunner(Runner):
@@ -39,6 +39,7 @@ class SFLRunner(Runner):
             'Iphyre-AdversarialVLM4k-v0', 'Iphyre-AdversarialVLM10k-v0',
             'Iphyre-AdversarialClaudeVLM10k-v0', 'Iphyre-AdversarialGeminiVLM10k-v0',
         }
+        self._is_multigrid = args.env_name.startswith('MultiGrid')
         self.learnability_sampler = LearnabilitySampler(
             venv=venv,
             learnability_alpha=args.learnability_alpha,
@@ -105,17 +106,26 @@ class SFLRunner(Runner):
         os.makedirs(f"{args.log_dir}/learnability", exist_ok=True)
 
         # dump current learnability info + sampling_count
-        task_info = dict(self.learnability_sampler.task_info_dict)
+        # Keys may be bytes (multigrid) → convert to hex for JSON
+        task_info = {
+            (k.hex() if isinstance(k, bytes) else k): v
+            for k, v in self.learnability_sampler.task_info_dict.items()
+        }
         for env_id, cnt in self.env_sampling_current_count.items():
-            if env_id in task_info:
-                task_info[env_id]["sampling_count"] = cnt
+            str_id = env_id.hex() if isinstance(env_id, bytes) else env_id
+            if str_id in task_info:
+                task_info[str_id]["sampling_count"] = cnt
         self.env_sampling_current_count.clear()
 
         with open(f"{args.log_dir}/learnability/learnability_{global_step}.json", "w") as f:
             json.dump(task_info, f)
 
+        serializable_count = {
+            (k.hex() if isinstance(k, bytes) else k): v
+            for k, v in self.env_sampling_total_count.items()
+        }
         with open(f"{args.log_dir}/learnability/env_sampling_total_count.json", "w") as f:
-            json.dump(dict(self.env_sampling_total_count), f)
+            json.dump(serializable_count, f)
 
         # subsample envs to evaluate
         env_names = list(self.learnability_sampler.env_names)
@@ -125,7 +135,19 @@ class SFLRunner(Runner):
         k = min(args.learnability_buffer_size, len(env_names))
         sampled_env_ids = random.sample(env_names, k)
 
-        # 你原本的 code 用 evaluate_parallel_envs，我沿用
+        if self._is_multigrid:
+            # Multigrid: evaluate agent on grid encodings using the training venv
+            results = self._eval_multigrid_levels(sampled_env_ids, num_episodes=10)
+            for enc in sampled_env_ids:
+                key = enc.tobytes()
+                self.learnability_sampler.update_learnability(
+                    env_id=enc,
+                    global_step=global_step,
+                    success_rate=results[key]["success_rate"],
+                )
+            return
+
+        # Iphyre path
         from eval import evaluate_parallel_envs
 
         chunk_size = 40
@@ -134,18 +156,12 @@ class SFLRunner(Runner):
         use_image_obs = getattr(self.args, "obs_type", "symbolic") == "embedding"
         env_config = {"state_type": "image"} if use_image_obs else {}
 
-        # PARAS is process-local in spawned subprocesses. Always fetch configs from
-        # the main-process PARAS so each subprocess can register the task in its own
-        # PARAS via IphyreGameEnv.__init__(env_task_config=...).
         from iphyre.simulator import PARAS as _PARAS
 
         for chunk in tqdm(chunks, desc="Updating learnability"):
             if self._vlm_mode:
-                # VLM: env_id is a task name, config lives in PARAS.
                 task_configs = [_PARAS.get(env_id) for env_id in chunk]
             else:
-                # Procedural: encoding = json.dumps(task_config) + '@@' + str(seed).
-                # Extract the config directly from the encoding string.
                 task_configs = [json.loads(env_id.split('@@')[0]) for env_id in chunk]
 
             results = evaluate_parallel_envs(
@@ -163,6 +179,70 @@ class SFLRunner(Runner):
                     global_step=global_step,
                     success_rate=results[env_id]["success_rate"],
                 )
+
+    def _eval_multigrid_levels(self, encodings, num_episodes=10):
+        """Evaluate agent on multigrid grid encodings using self.venv.
+
+        Runs num_episodes episodes per encoding by resetting to the given grid.
+        Returns {enc.tobytes(): {success_rate, mean_return}}.
+        """
+        N = self.args.num_processes
+        results = {}
+        self.agent.eval()
+
+        for batch_start in range(0, len(encodings), N):
+            batch = encodings[batch_start : batch_start + N]
+            n = len(batch)
+            padded = list(batch) + [batch[0]] * (N - n)
+
+            self.venv.reset_to_level_batch(padded)
+            obs = self.venv.reset_agent()
+
+            ep_returns = [[] for _ in range(n)]
+            running = [0.0] * N
+
+            hidden_size = self.agent.recurrent_hidden_state_size
+            rnn_hxs = torch.zeros(N, hidden_size, device=self.device)
+            if self.agent.is_lstm:
+                rnn_hxs = (rnn_hxs, torch.zeros_like(rnn_hxs))
+            masks = torch.ones(N, 1, device=self.device)
+
+            # Safety cap: 250 steps/episode × (num_episodes + 2) episodes
+            max_steps = 250 * (num_episodes + 2)
+            step_count = 0
+
+            while not all(len(ep_returns[i]) >= num_episodes for i in range(n)):
+                if step_count >= max_steps:
+                    break
+                step_count += 1
+
+                with torch.no_grad():
+                    _, action, _, rnn_hxs = self.agent.act(obs, rnn_hxs, masks, deterministic=True)
+
+                obs, reward, done, _ = self.venv.step_env(self.agent.process_action(action.cpu()))
+
+                for i in range(n):
+                    r = reward[i].item() if hasattr(reward[i], 'item') else float(reward[i])
+                    running[i] += r
+                    if done[i]:
+                        if len(ep_returns[i]) < num_episodes:
+                            ep_returns[i].append(running[i])
+                        running[i] = 0.0
+                        if len(ep_returns[i]) < num_episodes:
+                            obs_i = self.venv.reset_to_level(padded[i], i)
+                            self._set_obs_at_index(obs, obs_i, i)
+
+                masks = torch.FloatTensor([[0.0] if d else [1.0] for d in done]).to(self.device)
+
+            for i in range(n):
+                rets = ep_returns[i] if ep_returns[i] else [0.0]
+                results[batch[i].tobytes()] = {
+                    "success_rate": float(np.mean([r > 0 for r in rets])),
+                    "mean_return": float(np.mean(rets)),
+                }
+
+        self.agent.train()
+        return results
 
     def _get_obs_at_index(self, obs, i):
         if isinstance(obs, dict):
@@ -272,7 +352,8 @@ class SFLRunner(Runner):
             for i, info in enumerate(infos):
                 if "episode" in info:
                     rollout_returns[i].append(info["episode"]["r"])
-                    env_name = self.venv.remote_attr("level_seed", index=[i])[0][0]
+                    # Use _enc_key so numpy array encodings (multigrid) become bytes keys
+                    env_name = _enc_key(levels_history[i][-1])
 
                     self.env_sampling_total_count[env_name] += 1
                     self.env_sampling_current_count[env_name] += 1

@@ -1,11 +1,24 @@
 import random
 
+import numpy as np
+
 _VLM_ENV_NAMES = frozenset({
     'Iphyre-AdversarialVLM4k-v0',
     'Iphyre-AdversarialVLM10k-v0',
     'Iphyre-AdversarialClaudeVLM10k-v0',
     'Iphyre-AdversarialGeminiVLM10k-v0',
 })
+
+
+def _enc_key(enc):
+    """Return a hashable dict key for any encoding type.
+
+    Iphyre encodings are strings (already hashable).
+    MultiGrid encodings are numpy arrays → convert to bytes.
+    """
+    if isinstance(enc, np.ndarray):
+        return enc.tobytes()
+    return enc
 
 
 class LearnabilitySampler(object):
@@ -47,39 +60,49 @@ class LearnabilitySampler(object):
 
         self.learnability_last_updated_global_step = -1
 
-    def register_level(self, encoding: str) -> bool:
+    def register_level(self, encoding) -> bool:
         """
         Add a new procedural level encoding to the pool (no-op if already present).
         When pool is full (>= max_pool_size), drop the oldest entry first.
         Returns True if the level was newly registered.
+
+        encoding may be a str (iphyre) or numpy array (multigrid).
+        The dict key is always hashable (_enc_key); env_names stores the original.
         """
-        if encoding in self.task_info_dict:
+        key = _enc_key(encoding)
+        if key in self.task_info_dict:
             return False
         if len(self.env_names) >= self.max_pool_size:
             oldest = self.env_names.pop(0)
-            del self.task_info_dict[oldest]
-        self.env_names.append(encoding)
-        self.task_info_dict[encoding] = {
+            del self.task_info_dict[_enc_key(oldest)]
+        self.env_names.append(encoding)       # store original (e.g. numpy array)
+        self.task_info_dict[key] = {
             'zero_shot_success_rate': 0.0,
             'last_updated_global_step_for_learnability': 0,
         }
         return True
 
     def update_learnability(self, env_id, global_step, success_rate):
-        if env_id not in self.task_info_dict:
-            raise ValueError(f"Env {env_id} not found in learnability sampler")
+        key = _enc_key(env_id)
+        if key not in self.task_info_dict:
+            raise ValueError(f"Env not found in learnability sampler (key={key!r})")
 
         print('update learnability for env_id: ', env_id, 'with success_rate: ', success_rate)
-        self.task_info_dict[env_id] = {
+        self.task_info_dict[key] = {
             'zero_shot_success_rate': success_rate,
             'last_updated_global_step_for_learnability': global_step
         }
         self.learnability_last_updated_global_step = global_step
 
     def state_dict(self) -> dict:
+        # Serialize: convert bytes keys to hex strings, numpy env_names to lists
+        def _ser_key(k):
+            return k.hex() if isinstance(k, bytes) else k
+        def _ser_val(v):
+            return v.tolist() if isinstance(v, np.ndarray) else v
         return {
-            "task_info_dict": dict(self.task_info_dict),
-            "env_names": list(self.env_names),
+            "task_info_dict": {_ser_key(k): v for k, v in self.task_info_dict.items()},
+            "env_names": [_ser_val(e) for e in self.env_names],
             "learnability_last_updated_global_step": self.learnability_last_updated_global_step,
         }
 
@@ -100,7 +123,13 @@ class LearnabilitySampler(object):
         print('update env_names: ', self.env_names)
 
     def wrap_level_result(self, env_name):
-        """Return a level identifier string for venv.reset_to_level()."""
+        """Return a level identifier for venv.reset_to_level().
+
+        Numpy arrays (multigrid) are returned directly so reset_to_level()
+        receives the actual grid encoding.  Strings (iphyre) are returned as-is.
+        """
+        if isinstance(env_name, np.ndarray):
+            return env_name
         return str(env_name)
 
     def sample(self):
@@ -115,7 +144,7 @@ class LearnabilitySampler(object):
         sampled_env_ids = [
             env_id
             for env_id in self.env_names
-            if self.task_info_dict[env_id][
+            if self.task_info_dict[_enc_key(env_id)][
                 "last_updated_global_step_for_learnability"
             ] == self.learnability_last_updated_global_step
         ]
@@ -127,12 +156,12 @@ class LearnabilitySampler(object):
 
         task_priorities = [
             (
-                self.task_info_dict[env_id]["zero_shot_success_rate"]
+                self.task_info_dict[_enc_key(env_id)]["zero_shot_success_rate"]
                 + self.learnability_c
             ) ** (self.learnability_alpha)
             * (
                 1
-                - self.task_info_dict[env_id]["zero_shot_success_rate"]
+                - self.task_info_dict[_enc_key(env_id)]["zero_shot_success_rate"]
                 + self.learnability_c
             ) ** (1 - self.learnability_alpha)
             + epsilon

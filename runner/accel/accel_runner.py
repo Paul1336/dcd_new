@@ -161,14 +161,19 @@ class ACCELRunner(Runner):
     def _should_edit_level(self) -> bool:
         return self.use_editor and (np.random.rand() < self.edit_prob)
 
-    def _register_mutated_level(self, str_seed: str) -> int:
-        """Register a newly mutated level string ID and return its int seed."""
-        if str_seed not in self.level_id2seed:
+    def _register_mutated_level(self, enc) -> int:
+        """Register a level encoding and return its int seed.
+
+        enc may be a str (iphyre) or numpy array (multigrid).
+        Uses bytes as the hashable key for numpy arrays.
+        """
+        key = enc.tobytes() if isinstance(enc, np.ndarray) else enc
+        if key not in self.level_id2seed:
             int_seed = self._next_mut_seed
             self._next_mut_seed += 1
-            self.seed2level_id[int_seed] = str_seed
-            self.level_id2seed[str_seed] = int_seed
-        return self.level_id2seed[str_seed]
+            self.seed2level_id[int_seed] = enc   # store original for reset
+            self.level_id2seed[key] = int_seed
+        return self.level_id2seed[key]
 
     # -----------------------------------------------------------------------
     # Main rollout loop

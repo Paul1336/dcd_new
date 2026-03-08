@@ -133,14 +133,20 @@ class PLRRunner(Runner):
                 x = x[0]
             obs[i] = x
 
-    def _register_proc_level(self, str_level: str) -> int:
-        """Register a procedural level encoding and return its int seed."""
-        if str_level in self.level_id2seed:
-            return self.level_id2seed[str_level]
+    def _register_proc_level(self, enc) -> int:
+        """Register a procedural level encoding and return its int seed.
+
+        enc may be a str (iphyre) or numpy array (multigrid).
+        level_id2seed uses a hashable key (bytes for numpy arrays);
+        seed2level_id stores the original encoding for reset_to_level_batch.
+        """
+        key = enc.tobytes() if isinstance(enc, np.ndarray) else enc
+        if key in self.level_id2seed:
+            return self.level_id2seed[key]
         int_seed = self._next_proc_seed
         self._next_proc_seed += 1
-        self.seed2level_id[int_seed] = str_level
-        self.level_id2seed[str_level] = int_seed
+        self.seed2level_id[int_seed] = enc   # store original for env reset
+        self.level_id2seed[key] = int_seed
         return int_seed
 
     def _sample_new_level_int_seed(self) -> int:
