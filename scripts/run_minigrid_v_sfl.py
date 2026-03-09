@@ -65,12 +65,14 @@ PARAMS = {
     'log_grad_norm':                        True,
 }
 
+# Applied when --procedural is set: use adversarial procedural env.
 PROCEDURAL_OVERRIDES = {
     'env_name':                     'MultiGrid-GoalLastAdversarial-v0',
     'learnability_staleness':       0.5,
     'top_k_to_sample_uniformly':    100,
 }
 
+# Applied when --test is set: tiny run for smoke-testing.
 TEST_OVERRIDES = {
     'num_processes':                        2,
     'num_env_steps':                        2048,
@@ -133,11 +135,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device',     type=str, default='cuda:0')
     parser.add_argument('--log_dir',    type=str, default='~/logs/dcd/')
-    parser.add_argument('--method',     type=str, default=None)
-    parser.add_argument('--exp_name',   type=str, default=None)
-    parser.add_argument('--test',       action='store_true')
+    parser.add_argument('--method',     type=str, default=None,
+                        help='W&B method tag. Defaults to MultiGrid-{V,P}-SFL.')
+    parser.add_argument('--exp_name',   type=str, default=None,
+                        help='Experiment name. Defaults to minigrid_{v,p}_sfl.')
+    parser.add_argument('--test',       action='store_true',
+                        help='Smoke-test: tiny dataset + few steps, 1 trial, no confirm prompt.')
     parser.add_argument('--procedural', action='store_true',
-                        help='Use procedural env instead of VLM task pool.')
+                        help='Use procedural env (MultiGrid-GoalLastAdversarial-v0) instead of VLM tasks.')
     args = parser.parse_args()
 
     variant = 'P' if args.procedural else 'V'
@@ -147,14 +152,23 @@ if __name__ == '__main__':
         args.exp_name = f'minigrid_{variant.lower()}_sfl'
 
     num_trials = 1 if args.test else NUM_TRIALS
+
     cmds = [
-        build_cmd(seed=BASE_SEED + i, device=args.device, log_dir=args.log_dir,
-                  method=args.method, exp_name=args.exp_name,
-                  procedural=args.procedural, test=args.test)
+        build_cmd(
+            seed=BASE_SEED + i,
+            device=args.device,
+            log_dir=args.log_dir,
+            method=args.method,
+            exp_name=args.exp_name,
+            procedural=args.procedural,
+            test=args.test,
+        )
         for i in range(num_trials)
     ]
 
-    mode_parts = ['TEST'] if args.test else []
+    mode_parts = []
+    if args.test:
+        mode_parts.append('TEST')
     if args.procedural:
         mode_parts.append('Procedural')
     mode_label = f' [{", ".join(mode_parts)}]' if mode_parts else ''

@@ -5,7 +5,7 @@ import sys
 
 PARAMS = {
     # Env
-    'env_name':                     'MultiGrid-GoalLastAdversarial-v0',
+    'env_name':                     'MultiGrid-AdversarialVLM-v0',
     'ued_algo':                     'plr',
 
     # Rollout / PPO
@@ -65,6 +65,10 @@ PARAMS = {
     'log_grad_norm':                True,
 }
 
+PROCEDURAL_OVERRIDES = {
+    'env_name': 'MultiGrid-GoalLastAdversarial-v0',
+}
+
 TEST_OVERRIDES = {
     'num_processes':                2,
     'num_env_steps':                2048,
@@ -73,6 +77,7 @@ TEST_OVERRIDES = {
     'num_mini_batch':               1,
     'test_interval':                2,
     'test_num_episodes':            1,
+    'vlm_env_max_tasks':            20,
     'screenshot_interval':          0,
 }
 
@@ -80,8 +85,10 @@ BASE_SEED  = 88
 NUM_TRIALS = 3
 
 
-def build_cmd(seed, device, log_dir, method, exp_name, test=False):
+def build_cmd(seed, device, log_dir, method, exp_name, procedural=False, test=False):
     params = dict(PARAMS)
+    if procedural:
+        params.update(PROCEDURAL_OVERRIDES)
     if test:
         params.update(TEST_OVERRIDES)
     cmd = ['python', 'train.py']
@@ -120,21 +127,34 @@ def run_parallel(cmds):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--device',   type=str, default='cuda:0')
-    parser.add_argument('--log_dir',  type=str, default='~/logs/dcd/')
-    parser.add_argument('--method',   type=str, default='MultiGrid-PLR')
-    parser.add_argument('--exp_name', type=str, default='minigrid_plr')
-    parser.add_argument('--test',     action='store_true')
+    parser.add_argument('--device',     type=str, default='cuda:0')
+    parser.add_argument('--log_dir',    type=str, default='~/logs/dcd/')
+    parser.add_argument('--method',     type=str, default=None)
+    parser.add_argument('--exp_name',   type=str, default=None)
+    parser.add_argument('--test',       action='store_true')
+    parser.add_argument('--procedural', action='store_true',
+                        help='Use procedural env instead of VLM task pool.')
     args = parser.parse_args()
+
+    variant = 'P' if args.procedural else 'V'
+    if args.method is None:
+        args.method = f'MultiGrid-{variant}-PLR'
+    if args.exp_name is None:
+        args.exp_name = f'minigrid_{variant.lower()}_plr'
 
     num_trials = 1 if args.test else NUM_TRIALS
     cmds = [
         build_cmd(seed=BASE_SEED + i, device=args.device, log_dir=args.log_dir,
-                  method=args.method, exp_name=args.exp_name, test=args.test)
+                  method=args.method, exp_name=args.exp_name,
+                  procedural=args.procedural, test=args.test)
         for i in range(num_trials)
     ]
 
-    mode_label = ' [TEST]' if args.test else ''
+    mode_parts = ['TEST'] if args.test else []
+    if args.procedural:
+        mode_parts.append('Procedural')
+    mode_label = f' [{", ".join(mode_parts)}]' if mode_parts else ''
+
     print(f'=== {num_trials} trial(s) (seeds {BASE_SEED}–{BASE_SEED + num_trials - 1}){mode_label} ===\n')
     for i, cmd in enumerate(cmds):
         print(f'[Trial {i}] seed={BASE_SEED + i}')

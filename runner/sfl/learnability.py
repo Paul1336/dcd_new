@@ -7,6 +7,7 @@ _VLM_ENV_NAMES = frozenset({
     'Iphyre-AdversarialVLM10k-v0',
     'Iphyre-AdversarialClaudeVLM10k-v0',
     'Iphyre-AdversarialGeminiVLM10k-v0',
+    'MultiGrid-AdversarialVLM-v0',
 })
 
 
