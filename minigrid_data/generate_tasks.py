@@ -183,7 +183,7 @@ The "grid" array must have exactly {size} strings, each exactly {size} character
 
 # ---------- OpenAI API call ----------
 
-def call_openai(client, size: int, n_walls: int, difficulty: str, model: str):
+def call_openai(client, size: int, n_walls: int, difficulty: str, model: str, debug: bool = False):
     """Call OpenAI and return parsed JSON dict, or None on failure."""
     prompt = build_prompt(size, n_walls, difficulty)
     response = client.chat.completions.create(
@@ -192,14 +192,40 @@ def call_openai(client, size: int, n_walls: int, difficulty: str, model: str):
         messages=[{'role': 'user', 'content': prompt}],
     )
     text = response.choices[0].message.content.strip()
+    if debug:
+        print(f'  [debug] raw response ({len(text)} chars):\n{text[:500]}')
     # Strip markdown code fences if the model adds them anyway
     text = re.sub(r'^```[a-z]*\n?', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\n?```$', '', text)
     text = text.strip()
     try:
         return json.loads(text)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        if debug:
+            print(f'  [debug] JSON parse error: {e}')
         return None
+
+
+def _debug_validate(enc, size: int) -> str:
+    """Return a human-readable reason why validation failed."""
+    if enc is None:
+        return 'ascii_to_encoding returned None (wrong dimensions or unknown chars)'
+    H, W, _ = enc.shape
+    if H != size or W != size:
+        return f'wrong shape {H}x{W}, expected {size}x{size}'
+    for i in range(size):
+        for pos in [(0, i), (size-1, i), (i, 0), (i, size-1)]:
+            if int(enc[pos[0], pos[1], 0]) != 2:
+                return f'border cell {pos} is not a wall (type={int(enc[pos[0],pos[1],0])})'
+    n_agent = int(np.sum(enc[:, :, 0] == 10))
+    n_goal  = int(np.sum(enc[:, :, 0] == 8))
+    if n_agent != 1:
+        return f'expected 1 agent, found {n_agent}'
+    if n_goal != 1:
+        return f'expected 1 goal, found {n_goal}'
+    if bfs_path_length(enc) < 0:
+        return 'BFS: no path from agent to goal'
+    return 'ok'
 
 
 # ---------- task generation + save ----------
@@ -217,13 +243,26 @@ def generate_one(client, args, task_id: int, difficulty: str) -> bool:
             enc[s - 2, s - 2] = _GOAL
             parsed = {'description': 'dry-run task', 'grid': encoding_to_ascii(enc)}
         else:
-            parsed = call_openai(client, args.size, args.n_walls, difficulty, args.model)
+            parsed = call_openai(client, args.size, args.n_walls, difficulty, args.model,
+                                 debug=args.debug)
             if parsed is None:
+                if args.debug:
+                    print(f'  [debug] attempt {attempt}: call_openai returned None')
                 continue
             enc = ascii_to_encoding(parsed.get('grid', []), args.size)
 
         metrics = validate_encoding(enc, args.size)
         if metrics is None:
+            if args.debug:
+                reason = _debug_validate(enc, args.size)
+                grid_rows = parsed.get('grid', []) if parsed else []
+                print(f'  [debug] attempt {attempt}: validation failed — {reason}')
+                if grid_rows:
+                    print('  [debug] grid returned by model:')
+                    for row in grid_rows[:5]:
+                        print(f'    {row}')
+                    if len(grid_rows) > 5:
+                        print(f'    ... ({len(grid_rows)} rows total)')
             continue
 
         task_dir = os.path.join(args.output_dir, f'task_{task_id:06d}')
@@ -264,7 +303,9 @@ def main():
     parser.add_argument('--max-retries', type=int,   default=5,
                         help='Retries per task before giving up')
     parser.add_argument('--dry-run',     action='store_true',
-                        help='Generate trivial placeholder tasks without calling Claude')
+                        help='Generate trivial placeholder tasks without calling OpenAI')
+    parser.add_argument('--debug',       action='store_true',
+                        help='Print raw API responses and validation failure reasons')
     args = parser.parse_args()
 
     if not args.dry_run:
