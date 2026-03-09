@@ -72,6 +72,9 @@ class MultiGridAdversarialVLMEnv(AdversarialEnv):
               f'(grid {size}x{size})')
 
     def reset(self):
+        # Guard: super().__init__() calls self.reset() before subsampled_env_ids is set.
+        if not hasattr(self, 'subsampled_env_ids'):
+            return AdversarialEnv.reset(self)
         enc = random.choice(self.subsampled_env_ids)
         return self.reset_to_level(enc)
 
