@@ -48,7 +48,7 @@ class LearnabilitySampler(object):
             print('Learnability Sampler: First 10 env_names: ', self.env_names[:10])
             print('Learnability Sampler: len(env_names): ', len(self.env_names))
             self.task_info_dict = {
-                env_id: {
+                _enc_key(env_id): {
                     'zero_shot_success_rate': 0.0,
                     'last_updated_global_step_for_learnability': 0
                 }
