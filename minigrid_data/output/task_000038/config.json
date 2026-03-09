@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 24,
+  "interior_walls": 70,
+  "description": "Winding corridors force the agent to detour around central walls and dead-ends to reach the goal in the opposite corner.",
+  "ascii": [
+    "###############",
+    "#A..#...#.....#",
+    "#.#.#.#.#.###.#",
+    "#.#...#.#...#.#",
+    "#.###.###.#.#.#",
+    "#...#.....#.#.#",
+    "###.#.#####.#.#",
+    "#...#.....#...#",
+    "#.#####.#.#####",
+    "#.....#.#.....#",
+    "#.###.#.#####.#",
+    "#.#...#.....#.#",
+    "#.#.#####.###.#",
+    "#.....#...#..G#",
+    "###############"
+  ]
+}

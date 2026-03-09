@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 35,
+  "interior_walls": 75,
+  "description": "Corridors force the agent to snake around interior walls for a medium-length journey to the goal in the lower-right corner.",
+  "ascii": [
+    "###############",
+    "#A..###...#...#",
+    "#.#.#.#.#.#.#.#",
+    "#.#.#.#.#.#.#.#",
+    "#...#...#.#...#",
+    "###.#####.#####",
+    "#.....#.......#",
+    "#.###.#.#####.#",
+    "#.#...#.#...#.#",
+    "#.#.###.#.#.#.#",
+    "#.#.....#.#.#.#",
+    "#.#####.#.#.#.#",
+    "#...#.#...#..G#",
+    "#.#.#.#######.#",
+    "###############"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 34,
+  "interior_walls": 69,
+  "description": "Corridors twist around central walls requiring a winding detour from the top-left agent start to the bottom-right goal.",
+  "ascii": [
+    "###############",
+    "#A..#...#...#.#",
+    "###.#.#.#.#.#.#",
+    "#...#.#...#...#",
+    "#.#.###.###.#.#",
+    "#.#.....#.....#",
+    "#.#####.#.###.#",
+    "#.....#.#.#...#",
+    "###.###.#.###.#",
+    "#...#...#.#...#",
+    "#.###.###.###.#",
+    "#...#.....#...#",
+    "#.#.#.#####.#.#",
+    "#.#...#...#G..#",
+    "###############"
+  ]
+}

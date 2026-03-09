@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 30,
+  "interior_walls": 69,
+  "description": "A multi-corridor maze requiring the agent to zigzag and detour around clustered wall blocks to reach the goal.",
+  "ascii": [
+    "###############",
+    "#A..###..#....#",
+    "#.#.#..###.##.#",
+    "#.#.#....#..#.#",
+    "#.###.##.#.#..#",
+    "#.....#..#.#..#",
+    "#.###.#.###.#.#",
+    "#.#...#.....#.#",
+    "#.###.#####.#.#",
+    "#...#.#...#.#.#",
+    "#.#.#.#.#.#.#.#",
+    "#.#...#.#.#...#",
+    "#.#####.#.###.#",
+    "#.......#....G#",
+    "###############"
+  ]
+}

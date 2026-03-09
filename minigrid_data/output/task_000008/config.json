@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 40,
+  "interior_walls": 67,
+  "description": "This maze contains several winding corridors and dead ends, forcing the agent to make a moderately long detour to reach the goal.",
+  "ascii": [
+    "###############",
+    "#A#...#..#...G#",
+    "#.#.#.###.#.#.#",
+    "#...#.#...#...#",
+    "###.#.#.#####.#",
+    "#...#.#.......#",
+    "#.###.#######.#",
+    "#.#.....#.....#",
+    "#.#.###.#.###.#",
+    "#...#...#...#.#",
+    "###.#.#####.#.#",
+    "#...#.....#...#",
+    "#.#.#####.#.###",
+    "#.............#",
+    "###############"
+  ]
+}

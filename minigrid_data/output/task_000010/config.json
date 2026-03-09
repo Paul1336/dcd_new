@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 31,
+  "interior_walls": 67,
+  "description": "This maze uses winding corridors and many side branches, requiring the agent to detour around several wall clusters to reach the goal.",
+  "ascii": [
+    "###############",
+    "#A..##....#...#",
+    "#.##.#.##.#.#.#",
+    "#...#.#..#.#..#",
+    "#.#...##.#.##.#",
+    "#.#.##.#...#..#",
+    "#...#.#.###.###",
+    "###.#...#.....#",
+    "#...###.#.###.#",
+    "#.#...#...#.#.#",
+    "#.#.###.##.#..#",
+    "#.#.....#.##..#",
+    "#.#.##.#...#.G#",
+    "#.....#..###..#",
+    "###############"
+  ]
+}

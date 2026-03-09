@@ -96,8 +96,8 @@ TEST_OVERRIDES = {
     'screenshot_interval':                  0,
 }
 
-BASE_SEED  = 88
-NUM_TRIALS = 3
+BASE_SEED  = 92
+NUM_TRIALS = 1
 
 
 def build_cmd(seed, device, log_dir, method, exp_name,

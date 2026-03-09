@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 32,
+  "interior_walls": 68,
+  "description": "A winding series of corridors force the agent to detour around blocky clusters of walls to reach the goal in the upper-right.",
+  "ascii": [
+    "###############",
+    "#A..##...#...G#",
+    "#.#.##.#.#.##.#",
+    "#.#....#.#....#",
+    "#.###.###.###.#",
+    "#...#.....#...#",
+    "###.#.###.#.###",
+    "#...#.#.#.#...#",
+    "#.###.#.#.###.#",
+    "#.#.....#.....#",
+    "#.#.#####.###.#",
+    "#.#.......#...#",
+    "#.#######.#.###",
+    "#.............#",
+    "###############"
+  ]
+}

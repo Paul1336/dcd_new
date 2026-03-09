@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 29,
+  "interior_walls": 72,
+  "description": "A dense, winding maze with agent and goal at diagonally opposite corners, requiring a path of over 26 steps through many twists.",
+  "ascii": [
+    "###############",
+    "#A#.#.###.#...#",
+    "#.#.#.#.#.###.#",
+    "#.#.#.#.#...#.#",
+    "#.#.#.###.#.#.#",
+    "#...#.....#.#.#",
+    "###.#.#####.#.#",
+    "#...#.....#.#.#",
+    "#.###.###.#.#.#",
+    "#.#...#...#.#.#",
+    "#.#.###.###.#.#",
+    "#.#.#...#...#.#",
+    "#.#.###.#.###G#",
+    "#.............#",
+    "###############"
+  ]
+}
