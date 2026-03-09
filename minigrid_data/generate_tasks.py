@@ -129,7 +129,7 @@ def validate_encoding(enc: np.ndarray, size: int):
     return {'path_length': path_len, 'interior_walls': interior_walls}
 
 
-# ---------- Claude prompt ----------
+# ---------- OpenAI prompt ----------
 
 def build_prompt(size: int, n_walls: int, difficulty: str) -> str:
     interior = size - 2
@@ -181,17 +181,17 @@ OUTPUT FORMAT — respond with ONLY a JSON object, no markdown, no extra text:
 The "grid" array must have exactly {size} strings, each exactly {size} characters long."""
 
 
-# ---------- Claude API call ----------
+# ---------- OpenAI API call ----------
 
-def call_claude(client, size: int, n_walls: int, difficulty: str, model: str):
-    """Call Claude and return parsed JSON dict, or None on failure."""
+def call_openai(client, size: int, n_walls: int, difficulty: str, model: str):
+    """Call OpenAI and return parsed JSON dict, or None on failure."""
     prompt = build_prompt(size, n_walls, difficulty)
-    message = client.messages.create(
+    response = client.chat.completions.create(
         model=model,
         max_tokens=1024,
         messages=[{'role': 'user', 'content': prompt}],
     )
-    text = message.content[0].text.strip()
+    text = response.choices[0].message.content.strip()
     # Strip markdown code fences if the model adds them anyway
     text = re.sub(r'^```[a-z]*\n?', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\n?```$', '', text)
@@ -217,7 +217,7 @@ def generate_one(client, args, task_id: int, difficulty: str) -> bool:
             enc[s - 2, s - 2] = _GOAL
             parsed = {'description': 'dry-run task', 'grid': encoding_to_ascii(enc)}
         else:
-            parsed = call_claude(client, args.size, args.n_walls, difficulty, args.model)
+            parsed = call_openai(client, args.size, args.n_walls, difficulty, args.model)
             if parsed is None:
                 continue
             enc = ascii_to_encoding(parsed.get('grid', []), args.size)
@@ -260,7 +260,7 @@ def main():
                         choices=['easy', 'medium', 'hard', 'mixed'],
                         help='Difficulty level; mixed cycles easy/medium/hard')
     parser.add_argument('--output-dir',  default='minigrid_data/output')
-    parser.add_argument('--model',       default='claude-sonnet-4-6')
+    parser.add_argument('--model',       default='gpt-4.1-2025-04-14')
     parser.add_argument('--max-retries', type=int,   default=5,
                         help='Retries per task before giving up')
     parser.add_argument('--dry-run',     action='store_true',
@@ -269,11 +269,11 @@ def main():
 
     if not args.dry_run:
         try:
-            import anthropic
+            import openai
         except ImportError:
-            print('anthropic package not found. Install: pip install anthropic')
+            print('openai package not found. Install: pip install openai')
             sys.exit(1)
-        client = anthropic.Anthropic()
+        client = openai.OpenAI()
     else:
         client = None
         print('[dry-run] Skipping Claude API calls.')

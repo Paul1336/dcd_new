@@ -38,7 +38,7 @@ def main():
     parser.add_argument('--n-walls',     type=int,  default=50)
     parser.add_argument('--difficulty',  default='mixed',
                         choices=['easy', 'medium', 'hard', 'mixed'])
-    parser.add_argument('--model',       default='claude-sonnet-4-6')
+    parser.add_argument('--model',       default='gpt-4.1-2025-04-14')
     parser.add_argument('--max-retries', type=int,  default=5)
     args = parser.parse_args()
 
