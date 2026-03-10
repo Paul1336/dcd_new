@@ -14,6 +14,7 @@ _VLM_ENV_NAMES = frozenset({
     'Iphyre-AdversarialVLM10k-v0',
     'Iphyre-AdversarialClaudeVLM10k-v0',
     'Iphyre-AdversarialGeminiVLM10k-v0',
+    'MultiGrid-AdversarialVLM-v0',
 })
 
 
@@ -57,7 +58,10 @@ class ACCELRunner(Runner):
             env_names = venv.remote_attr('subsampled_env_ids', index=[0])[0][0]
             self._vlm_env_names = list(env_names)
             self.seed2level_id: dict = {i: env_id for i, env_id in enumerate(env_names)}
-            self.level_id2seed: dict = {env_id: i for i, env_id in enumerate(env_names)}
+            self.level_id2seed: dict = {
+                (enc.tobytes() if isinstance(enc, np.ndarray) else enc): i
+                for i, enc in enumerate(env_names)
+            }
         else:
             # Procedural: dynamic mapping grows during training
             self._vlm_env_names = []
@@ -154,7 +158,8 @@ class ACCELRunner(Runner):
         """Randomly pick a level int seed from the known pool."""
         if self._vlm_mode:
             env_id = random.choice(self._vlm_env_names)
-            return self.level_id2seed[env_id]
+            key = env_id.tobytes() if isinstance(env_id, np.ndarray) else env_id
+            return self.level_id2seed[key]
         else:
             return random.choice(list(self.seed2level_id.keys()))
 

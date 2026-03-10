@@ -35,10 +35,8 @@ class SFLRunner(Runner):
         self.reset()
 
         # --- learnability sampler ---
-        self._vlm_mode = args.env_name in {
-            'Iphyre-AdversarialVLM4k-v0', 'Iphyre-AdversarialVLM10k-v0',
-            'Iphyre-AdversarialClaudeVLM10k-v0', 'Iphyre-AdversarialGeminiVLM10k-v0',
-        }
+        from .learnability import _VLM_ENV_NAMES
+        self._vlm_mode = args.env_name in _VLM_ENV_NAMES
         self._is_multigrid = args.env_name.startswith('MultiGrid')
         self.learnability_sampler = LearnabilitySampler(
             venv=venv,

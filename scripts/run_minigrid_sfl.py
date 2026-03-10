@@ -89,7 +89,7 @@ BASE_SEED  = 88
 NUM_TRIALS = 3
 
 
-def build_cmd(seed, device, log_dir, method, exp_name, procedural=False, test=False):
+def build_cmd(seed, device, log_dir, method, exp_name, wandb_group=None, procedural=False, test=False):
     params = dict(PARAMS)
     if procedural:
         params.update(PROCEDURAL_OVERRIDES)
@@ -105,6 +105,8 @@ def build_cmd(seed, device, log_dir, method, exp_name, procedural=False, test=Fa
         f'--method={method}',
         f'--exp_name={exp_name}',
     ]
+    if wandb_group:
+        cmd.append(f'--wandb_group={wandb_group}')
     return ' '.join(str(x) for x in cmd)
 
 
@@ -136,8 +138,10 @@ if __name__ == '__main__':
     parser.add_argument('--method',     type=str, default=None)
     parser.add_argument('--exp_name',   type=str, default=None)
     parser.add_argument('--test',       action='store_true')
-    parser.add_argument('--procedural', action='store_true',
+    parser.add_argument('--procedural',   action='store_true',
                         help='Use procedural env instead of VLM task pool.')
+    parser.add_argument('--wandb_group',  type=str, default=None,
+                        help='W&B group name for run aggregation.')
     args = parser.parse_args()
 
     variant = 'P' if args.procedural else 'V'
@@ -149,7 +153,7 @@ if __name__ == '__main__':
     num_trials = 1 if args.test else NUM_TRIALS
     cmds = [
         build_cmd(seed=BASE_SEED + i, device=args.device, log_dir=args.log_dir,
-                  method=args.method, exp_name=args.exp_name,
+                  method=args.method, exp_name=args.exp_name, wandb_group=args.wandb_group,
                   procedural=args.procedural, test=args.test)
         for i in range(num_trials)
     ]
