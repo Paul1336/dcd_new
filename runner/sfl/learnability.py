@@ -174,9 +174,15 @@ class LearnabilitySampler(object):
             return self.wrap_level_result(random.choice(self.env_names))
         else:
             if self.top_k_to_sample_uniformly > 0:
+                # Use _enc_key for lookup to handle numpy arrays (list.index uses ==
+                # which returns an array for numpy, causing a truth-value error).
+                key_to_priority = {
+                    _enc_key(env_id): task_priorities[i]
+                    for i, env_id in enumerate(sampled_env_ids)
+                }
                 top_k_env_ids = sorted(
                     sampled_env_ids,
-                    key=lambda x: task_priorities[sampled_env_ids.index(x)],
+                    key=lambda x: key_to_priority[_enc_key(x)],
                     reverse=True,
                 )[: self.top_k_to_sample_uniformly]
                 return self.wrap_level_result(random.choice(top_k_env_ids))
