@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 29,
+  "interior_walls": 71,
+  "description": "A winding maze of corridors with several detours, forcing the agent to weave between walls to reach the goal.",
+  "ascii": [
+    "###############",
+    "#A..###..#....#",
+    "#.#.#.#.###.#.#",
+    "#.#...#...#.#.#",
+    "#.###.###.#.#.#",
+    "#...#.....#.#.#",
+    "###.#.#####.#.#",
+    "#...#.#...#.#.#",
+    "#.###.#.###.#.#",
+    "#.#...#.#...#.#",
+    "#.#.###.#.###.#",
+    "#.#...#.#...#.#",
+    "#.###.#.###.#G#",
+    "#.............#",
+    "###############"
+  ]
+}

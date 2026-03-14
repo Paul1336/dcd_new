@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 39,
+  "interior_walls": 69,
+  "description": "This maze challenges the agent to wind through zigzagging corridors and detour around several blockades before reaching the goal in the lower right.",
+  "ascii": [
+    "###############",
+    "#A..###...#...#",
+    "#.#.#.#.#.#.#.#",
+    "#.#.#.#.#.#.#.#",
+    "#...#.....#...#",
+    "###.#####.###.#",
+    "#...#...#.....#",
+    "#.#.#.#.#####.#",
+    "#.#.#.#.....#.#",
+    "#.#.#.#####.#.#",
+    "#...#.....#...#",
+    "#.###.###.###.#",
+    "#.....#...#..G#",
+    "#.#.#.#.#.#.#.#",
+    "###############"
+  ]
+}

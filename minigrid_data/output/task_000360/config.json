@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 25,
+  "interior_walls": 65,
+  "description": "A twisting maze where the agent must weave through multiple corridors and dead-ends to reach the goal in the bottom right.",
+  "ascii": [
+    "###############",
+    "#A#..#....#...#",
+    "#.#.###.##.#..#",
+    "#.#...#...#.#.#",
+    "#.###.#.###.#.#",
+    "#.#...#.....#.#",
+    "#.#.###.###.#.#",
+    "#...#...#.#...#",
+    "#.###.###.###.#",
+    "#.#.....#...#.#",
+    "#.#.###.#.#.#.#",
+    "#.#.#...#.#.#.#",
+    "#...#.###...#G#",
+    "#.............#",
+    "###############"
+  ]
+}

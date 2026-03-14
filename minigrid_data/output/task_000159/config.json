@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 38,
+  "interior_walls": 67,
+  "description": "A winding maze with several corridors and dead ends; the agent must take a circuitous route to reach the goal.",
+  "ascii": [
+    "###############",
+    "#A#...#....#..#",
+    "#.#.#.#.##.#..#",
+    "#.#.#.#..#.#..#",
+    "#.#.#.#..###..#",
+    "#...#.#.......#",
+    "###.#.#####.###",
+    "#...#.....#...#",
+    "#.###.###.#.###",
+    "#.....#...#...#",
+    "###.#.#.#####.#",
+    "#...#.#.......#",
+    "#.###.#######.#",
+    "#.....#....G..#",
+    "###############"
+  ]
+}

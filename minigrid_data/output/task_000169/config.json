@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 28,
+  "interior_walls": 69,
+  "description": "A winding maze with parallel corridors and several U-turns requiring the agent to detour around wall clusters.",
+  "ascii": [
+    "###############",
+    "#.....#...#..G#",
+    "#.###.#.#.###.#",
+    "#.#...#.#.....#",
+    "#.#.###.#####.#",
+    "#.#........#..#",
+    "#.#####.#######",
+    "#...#...#.....#",
+    "###.#.#.###.#.#",
+    "#.....#.....#.#",
+    "#.#######.###.#",
+    "#.#.....#.....#",
+    "#.###.###.###.#",
+    "#A....#.......#",
+    "###############"
+  ]
+}

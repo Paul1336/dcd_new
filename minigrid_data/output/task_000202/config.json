@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 28,
+  "interior_walls": 66,
+  "description": "A winding maze with branching corridors forces the agent to detour around several walls to reach the goal in the bottom right.",
+  "ascii": [
+    "###############",
+    "#A..#..#......#",
+    "##.#.##..###..#",
+    "#..#..#..#.#..#",
+    "#..###..#.#.###",
+    "#.....##...#..#",
+    "#.###.####.#..#",
+    "#.#.....#..#..#",
+    "#.#.###.#.###.#",
+    "#.#.#.....#...#",
+    "#.#.#####.#.#.#",
+    "#...#...#...#.#",
+    "#.###.#.#####.#",
+    "#.....#....G..#",
+    "###############"
+  ]
+}

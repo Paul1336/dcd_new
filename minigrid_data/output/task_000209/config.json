@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "easy",
+  "path_length": 21,
+  "interior_walls": 35,
+  "description": "A mostly open maze with agent and goal close together in the bottom right, only a few walls blocking direct lines.",
+  "ascii": [
+    "###############",
+    "#A...#....#...#",
+    "#.#..#..#.....#",
+    "#.#..#..#..#..#",
+    "#.#.....#.....#",
+    "#...###.....#.#",
+    "#..#...#..#...#",
+    "#.....#....#..#",
+    "#...#...#.....#",
+    "#.#..##....#..#",
+    "#..#.....#...G#",
+    "#....#...#..#.#",
+    "#..#.....#....#",
+    "#.....#.....#.#",
+    "###############"
+  ]
+}

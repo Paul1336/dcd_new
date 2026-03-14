@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 29,
+  "interior_walls": 69,
+  "description": "This maze features winding corridors and blockages, requiring the agent to take several bends and detours to reach the goal.",
+  "ascii": [
+    "###############",
+    "#A...###...#..#",
+    "#.#.#.#.#.#.#.#",
+    "#.#.#...#.#...#",
+    "#...#####.###.#",
+    "###.......#...#",
+    "#...#######.###",
+    "#.#.....#.....#",
+    "#.###.#.#.###.#",
+    "#...#.#...#...#",
+    "##.#.#####.##.#",
+    "#...#.....#...#",
+    "#.#####.#.###.#",
+    "#.....#.#...G.#",
+    "###############"
+  ]
+}

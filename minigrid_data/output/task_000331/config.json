@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 25,
+  "interior_walls": 67,
+  "description": "Corridors twist through the maze, forcing the agent to navigate several turns and detours to reach the diagonally opposite goal.",
+  "ascii": [
+    "###############",
+    "#A..##...#....#",
+    "#.#.##.#.#.##.#",
+    "#.#.....#..#..#",
+    "#.#.###.###.#.#",
+    "#...#.....#.#.#",
+    "###.#.###.#.#.#",
+    "#...#...#...#.#",
+    "#.###.#.###.#.#",
+    "#.#...#...#.#.#",
+    "#.#.#####.#.#.#",
+    "#...#.....#...#",
+    "###.#.###.###.#",
+    "#.....#.....G.#",
+    "###############"
+  ]
+}

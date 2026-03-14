@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 31,
+  "interior_walls": 74,
+  "description": "A winding corridor maze with alternating walls and open areas requiring a zigzag path from the top left to the lower right.",
+  "ascii": [
+    "###############",
+    "#A.#.###...#..#",
+    "#.#.#.#.#.#.#.#",
+    "#.#.#.#.#.#.#.#",
+    "#...#...#.#...#",
+    "###.#####.###.#",
+    "#...#.......#.#",
+    "#.###.#####.#.#",
+    "#.....#...#.#.#",
+    "#####.#.#.#.#.#",
+    "#.....#.#.#.#.#",
+    "#.#########.#.#",
+    "#...#.....#...#",
+    "#.#.#.###.#.G.#",
+    "###############"
+  ]
+}

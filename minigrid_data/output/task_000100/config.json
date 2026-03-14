@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 33,
+  "interior_walls": 65,
+  "description": "A winding maze with branching corridors requires clever navigation around blocked paths to reach the goal.",
+  "ascii": [
+    "###############",
+    "#A...##...#...#",
+    "#.#.#..#.#.#..#",
+    "#.#.#..#.#.##.#",
+    "#...#.##...#..#",
+    "###.#....###..#",
+    "#...#####..#..#",
+    "#.#.....#..#.##",
+    "#.###.#.##.#..#",
+    "#...#.#....##.#",
+    "##.#.#.####.#.#",
+    "#..#..#.....#.#",
+    "#.####..###.#.#",
+    "#......#..G...#",
+    "###############"
+  ]
+}

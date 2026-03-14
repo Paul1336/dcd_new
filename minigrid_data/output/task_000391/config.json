@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 38,
+  "interior_walls": 69,
+  "description": "A winding corridor maze forcing the agent to navigate around clusters of walls and take several turns to reach the goal.",
+  "ascii": [
+    "###############",
+    "#A#...#.#.....#",
+    "#.#.#.#.#.###.#",
+    "#.#.#.#...#...#",
+    "#.#.#.#####.#.#",
+    "#...#.....#.#.#",
+    "###.#.###.#.#.#",
+    "#...#.#...#.#.#",
+    "#.###.#.###.#.#",
+    "#...#.#.....#.#",
+    "#.###.#####.#.#",
+    "#.....#...#.#G#",
+    "###.#.#.#.#.#.#",
+    "#.....#.#.....#",
+    "###############"
+  ]
+}

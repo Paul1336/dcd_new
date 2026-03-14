@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 56,
+  "interior_walls": 73,
+  "description": "Dense labyrinth with twisting corridors, placing the agent and goal at distant corners with a long, winding path between.",
+  "ascii": [
+    "###############",
+    "#A..###.#.....#",
+    "#.#.#.#.#.###.#",
+    "#.#.#.#...#.#.#",
+    "#.#.#.###.#.#.#",
+    "#...#...#.#.#.#",
+    "###.###.#.#.#.#",
+    "#...#...#.#.#.#",
+    "#.###.###.#.#.#",
+    "#...#.....#.#.#",
+    "###.#####.#.#.#",
+    "#...#.....#...#",
+    "#.#.#.#####.###",
+    "#.#...#...#..G#",
+    "###############"
+  ]
+}

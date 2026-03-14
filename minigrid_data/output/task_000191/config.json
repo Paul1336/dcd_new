@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 43,
+  "interior_walls": 76,
+  "description": "Challenging maze with winding corridors and many dead ends; agent and goal are in opposite corners, separated by dense walls.",
+  "ascii": [
+    "###############",
+    "#A#.#.#######.#",
+    "#.#.#...#.....#",
+    "#.#.###.#.###.#",
+    "#...#...#...#.#",
+    "###.###.###.#.#",
+    "#...#.....#.#.#",
+    "#.###.###.#.#.#",
+    "#...#.#...#...#",
+    "###.#.###.###.#",
+    "#...#.#.....#.#",
+    "#.###.#.###.#.#",
+    "#.....#...#...#",
+    "#.#######.#.G.#",
+    "###############"
+  ]
+}

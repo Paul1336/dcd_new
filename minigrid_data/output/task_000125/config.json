@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 25,
+  "interior_walls": 61,
+  "description": "Corridors twist around central wall clusters, requiring the agent to detour to reach the goal in the lower right.",
+  "ascii": [
+    "###############",
+    "#A#..###......#",
+    "#.#..#..###.#.#",
+    "#.#..#..#.#.#.#",
+    "#...##..#.#...#",
+    "###..##.#.##..#",
+    "#..#....#..##.#",
+    "#..##.###.....#",
+    "#.#...#..####.#",
+    "#.#.#.#..#....#",
+    "#.#.#.##.##.#.#",
+    "#...#......#..#",
+    "#.###..###..#G#",
+    "#.............#",
+    "###############"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 33,
+  "interior_walls": 68,
+  "description": "Corridors wind around several wall clusters, forcing the agent to take a moderately long detour to the goal in the bottom right.",
+  "ascii": [
+    "###############",
+    "#A..#.....#...#",
+    "#.#.#.###.#.#.#",
+    "#.#...#...#.#.#",
+    "#.###.#.###...#",
+    "#...#.#...#.#.#",
+    "###.#.###.#.#.#",
+    "#...#...#.#...#",
+    "#.#####.#.###.#",
+    "#.....#.#.....#",
+    "#.###.#.#####.#",
+    "#.#.....#.....#",
+    "#.#.#####.###.#",
+    "#...#.....#.G.#",
+    "###############"
+  ]
+}

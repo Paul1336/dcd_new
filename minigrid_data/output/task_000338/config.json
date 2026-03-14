@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 24,
+  "interior_walls": 68,
+  "description": "A winding corridor maze with several blockades and bends, requiring the agent to detour through multiple paths to reach the goal.",
+  "ascii": [
+    "###############",
+    "#A..#..#.....G#",
+    "#.#.#.###.###.#",
+    "#.#...#...#...#",
+    "#.###.#.#.#.#.#",
+    "#...#.#.#.#.#.#",
+    "###.#.###.#.#.#",
+    "#...#.......#.#",
+    "#.#####.#####.#",
+    "#.#...#.....#.#",
+    "#.#.###.###.#.#",
+    "#.#...#...#.#.#",
+    "#.###.#.###.#.#",
+    "#.............#",
+    "###############"
+  ]
+}

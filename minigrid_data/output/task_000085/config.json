@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 43,
+  "interior_walls": 69,
+  "description": "A winding maze with multiple corridors and dead ends requiring a detour to reach the goal in the lower right.",
+  "ascii": [
+    "###############",
+    "#A#.####......#",
+    "#..#....#.###.#",
+    "#..####.#...#.#",
+    "#..#....#.#.#.#",
+    "#..#.##.#.#.#.#",
+    "#..#.#..#.#.#.#",
+    "#..#.#.##.#.#.#",
+    "#..#.#....#.#.#",
+    "#..###.####.#.#",
+    "#......#..#.#.#",
+    "#.####.#.#.#..#",
+    "#....#.#.#.##.#",
+    "#.####...#..G.#",
+    "###############"
+  ]
+}

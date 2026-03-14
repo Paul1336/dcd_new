@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 38,
+  "interior_walls": 72,
+  "description": "Corridors snake around clustered walls, requiring the agent to traverse back and forth to reach the goal at the far corner.",
+  "ascii": [
+    "###############",
+    "#A..#...#.....#",
+    "#.#.#.#.#.###.#",
+    "#.#.#.#.#...#.#",
+    "#.#...#.#.#.#.#",
+    "#.#####.#.#.#.#",
+    "#.....#.#.#.#.#",
+    "###.#.#.#.#.#.#",
+    "#...#.#...#.#.#",
+    "#.###.#####.#.#",
+    "#...#.....#.#.#",
+    "###.#.###.#.#.#",
+    "#...#.#...#...#",
+    "#.#.#.#.###G#.#",
+    "###############"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 25,
+  "interior_walls": 66,
+  "description": "The maze features winding corridors and blockades, requiring several detours en route from the upper left to the lower right.",
+  "ascii": [
+    "###############",
+    "#A..#..#..#...#",
+    "#.#.#.###.#.#.#",
+    "#.#.....#.#.#.#",
+    "#.#####.#.#.#.#",
+    "#.....#.#.#.#.#",
+    "###.#.#.#.#.#.#",
+    "#...#.#...#...#",
+    "#.###.#####.###",
+    "#.....#...#...#",
+    "###.#.#.#.#.#.#",
+    "#...#.#.#.#.#.#",
+    "#.#.#.#.#.#.#G#",
+    "#.............#",
+    "###############"
+  ]
+}

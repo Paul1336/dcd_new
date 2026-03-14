@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 32,
+  "interior_walls": 69,
+  "description": "A twisting maze of corridors leads the agent from the top-left toward the bottom-right, requiring several detours to reach the goal.",
+  "ascii": [
+    "###############",
+    "#A#...#...#...#",
+    "#.#.#.#.#.#.#.#",
+    "#...#.#.....#.#",
+    "###.#####.###.#",
+    "#...#...#.#...#",
+    "#.###.#.#.#.###",
+    "#.....#...#...#",
+    "#.#####.#####.#",
+    "#.#...#.....#.#",
+    "#.#.###.###.#.#",
+    "#...#.#...#...#",
+    "#.#.#.###.#.###",
+    "#...#.....#..G#",
+    "###############"
+  ]
+}

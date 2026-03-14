@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 41,
+  "interior_walls": 71,
+  "description": "Corridors force the agent to weave through dead ends and turn multiple times before reaching the goal in the lower right.",
+  "ascii": [
+    "###############",
+    "#A..###...#...#",
+    "#.#.#.#.#.#.#.#",
+    "#.#.#.#.#.#.#.#",
+    "#...#...#...#.#",
+    "###.#####.###.#",
+    "#...#...#.....#",
+    "#.###.#####.###",
+    "#.#.....#...#G#",
+    "#.#.###.#.#.#.#",
+    "#.#.#.#.#.#.#.#",
+    "#...#.#...#...#",
+    "###.#.#####.###",
+    "#.....#.......#",
+    "###############"
+  ]
+}

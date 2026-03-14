@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 50,
+  "interior_walls": 68,
+  "description": "A winding maze of corridors between start and goal requiring careful navigation around several wall barriers.",
+  "ascii": [
+    "###############",
+    "#A...#..#.....#",
+    "#.#.#.#.#.###.#",
+    "#.#.#.#...#...#",
+    "#...#.#.###.#.#",
+    "###.#.#.....#.#",
+    "#...#.#.#####.#",
+    "#.###...#.....#",
+    "#...#####.###.#",
+    "#.#.....#.#...#",
+    "#.#.#####.#.###",
+    "#.#.#...#.#...#",
+    "#.#.#.#.#.###.#",
+    "#.....#...#G..#",
+    "###############"
+  ]
+}

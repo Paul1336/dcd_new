@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 52,
+  "interior_walls": 69,
+  "description": "A winding corridor maze with several side branches and dead-ends leads the agent on a medium-length detour to the goal.",
+  "ascii": [
+    "###############",
+    "#A..#..#..#..G#",
+    "#.#.#.###.#.###",
+    "#.#.#.....#...#",
+    "#...#.###.###.#",
+    "###.#...#.....#",
+    "#...###.#.###.#",
+    "#.#...#.#.#...#",
+    "#.#.###.#.#.###",
+    "#...#...#.#...#",
+    "###.#.###.###.#",
+    "#...#.#...#...#",
+    "#.###.#.###.#.#",
+    "#.....#.....#.#",
+    "###############"
+  ]
+}

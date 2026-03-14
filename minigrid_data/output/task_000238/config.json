@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 68,
+  "interior_walls": 72,
+  "description": "A winding corridor maze with multiple bottlenecks, requiring the agent to make several turns to reach the goal.",
+  "ascii": [
+    "###############",
+    "#A..#...#...#G#",
+    "###.#.#.#.#.#.#",
+    "#...#.#.#.#...#",
+    "#.###.#.#.###.#",
+    "#.#...#...#...#",
+    "#.#.#######.###",
+    "#.#.......#...#",
+    "#.#######.#.###",
+    "#.......#.#...#",
+    "###.###.#.###.#",
+    "#...#...#.#...#",
+    "#.###.###.#.###",
+    "#...#.....#...#",
+    "###############"
+  ]
+}

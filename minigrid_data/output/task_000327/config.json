@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 27,
+  "interior_walls": 74,
+  "description": "A twisting corridor maze requiring detours around several wall clusters to reach the goal in the lower right corner.",
+  "ascii": [
+    "###############",
+    "#A...###..#...#",
+    "#.#.#...#.#.#.#",
+    "#.#.###.#.#.#.#",
+    "#.#.....#...#.#",
+    "###.#####.###.#",
+    "#...#...#.....#",
+    "#.#.#.#.#####.#",
+    "#.#...#.....#.#",
+    "#.#####.###.#.#",
+    "#.....#.#...#.#",
+    "#.###.#.###.#.#",
+    "#.#...#...#..G#",
+    "#.#.#######.#.#",
+    "###############"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "easy",
+  "path_length": 23,
+  "interior_walls": 52,
+  "description": "An open maze with few walls where the agent and goal are on the same side and easily reachable within a short path.",
+  "ascii": [
+    "###############",
+    "#A....#.......#",
+    "#.##..#..###..#",
+    "#.....#.......#",
+    "#.#####.#####.#",
+    "#.....#.......#",
+    "#.##..#####...#",
+    "#...#.....##..#",
+    "#.###.#.......#",
+    "#.....###.###.#",
+    "#.#####.......#",
+    "#...###.#..##.#",
+    "#.....#...#..G#",
+    "#.............#",
+    "###############"
+  ]
+}

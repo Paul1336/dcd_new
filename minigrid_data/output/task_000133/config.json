@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 22,
+  "interior_walls": 73,
+  "description": "A maze with multiple winding corridors and dead-ends, requiring the agent to loop around the center to reach the goal in the lower-right.",
+  "ascii": [
+    "###############",
+    "#A..###.#.....#",
+    "#.#.#...#.#.#.#",
+    "#.#.#.###.#.#.#",
+    "#.#...#...#...#",
+    "#.###.#.#####.#",
+    "#...#.#.....#.#",
+    "###.#.#####.#.#",
+    "#...#.....#.#.#",
+    "#.#.#####.#.#.#",
+    "#.#.....#.#.#.#",
+    "#.#####.#.#.#.#",
+    "#...#...#...G.#",
+    "#.#.#.###.###.#",
+    "###############"
+  ]
+}

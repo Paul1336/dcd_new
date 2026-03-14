@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 31,
+  "interior_walls": 69,
+  "description": "Corridors with several detours require navigating around central wall clusters to reach the bottom right goal.",
+  "ascii": [
+    "###############",
+    "#A#...#....#..#",
+    "#.#.#.#####.#.#",
+    "#.#.#.....#.#.#",
+    "#.#.###.#.#.#.#",
+    "#...#.#.#.#...#",
+    "###.#.#.#.###.#",
+    "#...#...#.....#",
+    "#.###.#####.###",
+    "#.#.....#.....#",
+    "#.#.###.#.###.#",
+    "#.#...#.#.#...#",
+    "#.###.#.#.#.#G#",
+    "#.....#...#...#",
+    "###############"
+  ]
+}

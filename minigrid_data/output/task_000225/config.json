@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 40,
+  "interior_walls": 70,
+  "description": "A winding, corridor-filled maze with multiple turns and a single path connecting the agent and goal in opposite corners.",
+  "ascii": [
+    "###############",
+    "#A..###...#...#",
+    "###.#.###.#.#.#",
+    "#...#.....#.#.#",
+    "#.###.###.#.#.#",
+    "#.#.....#.....#",
+    "#.#.#####.###.#",
+    "#.#.#...#...#.#",
+    "#...#.#.#####.#",
+    "###.#.#...#...#",
+    "#...#.#.###.#.#",
+    "#.###.#.#...#.#",
+    "#.....#.#.###.#",
+    "#.#.#...#..G..#",
+    "###############"
+  ]
+}

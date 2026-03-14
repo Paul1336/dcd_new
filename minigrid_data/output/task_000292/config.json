@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 34,
+  "interior_walls": 68,
+  "description": "Winding corridors force the agent to zigzag from the top-left to top-right, dodging short walls in the maze\u2019s core.",
+  "ascii": [
+    "###############",
+    "#A#...#.....#G#",
+    "#.#.#.#.###.#.#",
+    "#.#.#.#...#.#.#",
+    "#...#.#.#.#...#",
+    "###.#.#.#.###.#",
+    "#...#...#.....#",
+    "#.###.#####.###",
+    "#.....#...#...#",
+    "#.###.#.#.###.#",
+    "#...#.#.#.#...#",
+    "#.#.#...#.#.#.#",
+    "#.#.#####.#.#.#",
+    "#.....#.....#.#",
+    "###############"
+  ]
+}

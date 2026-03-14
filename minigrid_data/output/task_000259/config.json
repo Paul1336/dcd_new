@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 27,
+  "interior_walls": 67,
+  "description": "A twisting path with several dead-ends and central corridors requires a winding route from the upper left to the lower right.",
+  "ascii": [
+    "###############",
+    "#A..##..#.....#",
+    "#.##.#..###.#.#",
+    "#...##.#...#..#",
+    "###..#.#.##.#.#",
+    "#.....#...##..#",
+    "##.###.###..###",
+    "#..#.....#....#",
+    "#.#######.##..#",
+    "#......#..##..#",
+    "##.##.###...#.#",
+    "#..#.....####.#",
+    "#.###.##.....G#",
+    "#........###..#",
+    "###############"
+  ]
+}

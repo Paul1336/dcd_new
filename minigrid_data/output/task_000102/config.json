@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 28,
+  "interior_walls": 68,
+  "description": "A twisting maze with narrow corridors and alternating wall patterns requiring a moderate detour to reach the goal.",
+  "ascii": [
+    "###############",
+    "#A..#...#.....#",
+    "#.#.#.#.#.###.#",
+    "#.#...#.#...#.#",
+    "#.###.#.###.#.#",
+    "#.....#.....#.#",
+    "###.#####.###.#",
+    "#...#...#.....#",
+    "#.###.#.#####.#",
+    "#...#.#.......#",
+    "###.#.###.###.#",
+    "#.....#...#G#.#",
+    "#.###.#####.#.#",
+    "#...........#.#",
+    "###############"
+  ]
+}

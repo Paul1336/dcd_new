@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 26,
+  "interior_walls": 68,
+  "description": "A winding corridor maze with a few open pockets and a 19-step path from the agent in the upper left to the goal in the lower right.",
+  "ascii": [
+    "###############",
+    "#A..##....#...#",
+    "#.#.##.##.#.#.#",
+    "#.#....#..#.#.#",
+    "#.####.#.###..#",
+    "#.....#...#.#.#",
+    "###.#.###.#.#.#",
+    "#...#.....#...#",
+    "#.#.#####.###.#",
+    "#.#.....#.....#",
+    "#.###.###.###.#",
+    "#.#...#...#.#.#",
+    "#..###.#.###..#",
+    "#...#.....#G..#",
+    "###############"
+  ]
+}

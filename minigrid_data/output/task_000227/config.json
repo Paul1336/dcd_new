@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 30,
+  "interior_walls": 66,
+  "description": "Winding corridors force the agent to weave through turns and dead ends to reach the goal in the bottom right.",
+  "ascii": [
+    "###############",
+    "#A..##..#.....#",
+    "###.##..##.##.#",
+    "#...#.....##..#",
+    "#.###.###..##.#",
+    "#..#.....#....#",
+    "#.##.###.###..#",
+    "#....#...####.#",
+    "##.##.#.##....#",
+    "#..#.###..###.#",
+    "#.##..##.#..#.#",
+    "#....##...#...#",
+    "#.##..###.##G.#",
+    "#.............#",
+    "###############"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 33,
+  "interior_walls": 68,
+  "description": "The maze has multiple turns and walled corridors requiring the agent to snake through passageways to reach the goal.",
+  "ascii": [
+    "###############",
+    "#A#...#.......#",
+    "#.#.#.#.#####.#",
+    "#.#.#...#...#.#",
+    "#.#.###.#.#.#.#",
+    "#...#...#.#...#",
+    "###.#.###.###.#",
+    "#...#.....#...#",
+    "#.###.#####.###",
+    "#...#.#...#...#",
+    "###.#.#.###.#.#",
+    "#...#.#.....#.#",
+    "#.###.#####.#G#",
+    "#.............#",
+    "###############"
+  ]
+}

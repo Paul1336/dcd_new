@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 39,
+  "interior_walls": 71,
+  "description": "A twisting corridor maze where the agent must navigate several turns and blocked passages to reach the goal placed across the map.",
+  "ascii": [
+    "###############",
+    "#A..#..#......#",
+    "###.#.###.#####",
+    "#...#...#.....#",
+    "#.#####.#.###.#",
+    "#.....#.#...#.#",
+    "#.###.#.###.#.#",
+    "#.#...#.....#.#",
+    "#.#.#######.#.#",
+    "#.#.........#.#",
+    "#.#########.#.#",
+    "#.....#.....#.#",
+    "#####.#.#####.#",
+    "#.....#.....G.#",
+    "###############"
+  ]
+}

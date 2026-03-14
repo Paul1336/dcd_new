@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 25,
+  "interior_walls": 66,
+  "description": "A winding set of corridors and blockades forces the agent to detour around walls to reach the bottom-right goal.",
+  "ascii": [
+    "###############",
+    "#A....#..#....#",
+    "###.#.#.###.#.#",
+    "#...#...#.....#",
+    "#.###.#.#.###.#",
+    "#.....#.#.....#",
+    "#.#.#####.#####",
+    "#.#.....#.....#",
+    "#.#####.#.###.#",
+    "#.....#.....#.#",
+    "###.#.#####.#.#",
+    "#...#.......#.#",
+    "#.#.###.#####.#",
+    "#.....#...G...#",
+    "###############"
+  ]
+}

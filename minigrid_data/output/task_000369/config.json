@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 39,
+  "interior_walls": 74,
+  "description": "A winding set of corridors with several dead ends and turns; the agent must detour around central walls to reach the goal in the lower right.",
+  "ascii": [
+    "###############",
+    "#A..#...###...#",
+    "#.#.#.#...#.#.#",
+    "#.#.#.#.#.#.#.#",
+    "#...#.#.#...#.#",
+    "###.#.###.###.#",
+    "#...#.....#...#",
+    "#.#####.#.###.#",
+    "#.....#.#.....#",
+    "#.###.###.###.#",
+    "#.#...#...#.#.#",
+    "#.#.###.#.#.#.#",
+    "#.#.....#...#G#",
+    "#.#######.###.#",
+    "###############"
+  ]
+}

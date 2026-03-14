@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 27,
+  "interior_walls": 74,
+  "description": "A dense maze with snaking corridors, agent and goal in opposite corners, requiring a long and winding path to solve.",
+  "ascii": [
+    "###############",
+    "#A#.#.###.#.#.#",
+    "#.#.#.#.#.#.#.#",
+    "#.#.#.#.#.#.#.#",
+    "#.#.#.#.###.#.#",
+    "#...#...#.....#",
+    "###.#####.###.#",
+    "#...#.....#...#",
+    "#.#.###.#.###.#",
+    "#.#.....#.....#",
+    "#.#####.#####.#",
+    "#.#...#.....#.#",
+    "#.#.#.#####.#G#",
+    "#.#.#.......#.#",
+    "###############"
+  ]
+}

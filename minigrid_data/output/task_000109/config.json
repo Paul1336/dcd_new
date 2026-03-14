@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 41,
+  "interior_walls": 72,
+  "description": "Corridors twist through dense walls, requiring the agent to detour several times before reaching the goal.",
+  "ascii": [
+    "###############",
+    "#A#....#..#...#",
+    "#.#.##.#.##.#.#",
+    "#.#...#...#.#.#",
+    "#.#.#####.#.#.#",
+    "#.#.#...#.#...#",
+    "#...#.#.#.###.#",
+    "###.#.#...#...#",
+    "#...#.#.#####.#",
+    "#.###.#.....#.#",
+    "#.#...###.#.#.#",
+    "#.#.##..#.#.#.#",
+    "#...#..#.#...G#",
+    "#.#.##.#.#.####",
+    "###############"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 27,
+  "interior_walls": 67,
+  "description": "A twisting maze of corridors requires the agent to make several turns before reaching the goal in the lower right.",
+  "ascii": [
+    "###############",
+    "#A..###..#....#",
+    "##.#..#..###..#",
+    "#..#.#.#.#.##.#",
+    "#..###...#....#",
+    "#.##...######.#",
+    "#....#.##...#.#",
+    "#.###.#..#.#..#",
+    "#...##.#.#.##.#",
+    "#.##..#..#....#",
+    "#..#####.###..#",
+    "#..#....#..##.#",
+    "#.###.####...G#",
+    "#.............#",
+    "###############"
+  ]
+}

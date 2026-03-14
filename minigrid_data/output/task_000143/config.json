@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "easy",
+  "path_length": 25,
+  "interior_walls": 45,
+  "description": "An easy maze with the agent and goal in the lower left, separated by a short, open path and a few dispersing walls.",
+  "ascii": [
+    "###############",
+    "#A....##......#",
+    "#.##..#..##...#",
+    "#.#...#.......#",
+    "#.#..###..#...#",
+    "#.#.....#.##..#",
+    "#.###...#.....#",
+    "#.....###...#.#",
+    "#..###....###.#",
+    "#....#..#.....#",
+    "#..#..#..##...#",
+    "#.....##..##..#",
+    "#...##....#..G#",
+    "#.............#",
+    "###############"
+  ]
+}

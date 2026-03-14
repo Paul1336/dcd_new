@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 35,
+  "interior_walls": 68,
+  "description": "A winding set of corridors with multiple forks and dead ends forces a medium-length detour from start to goal.",
+  "ascii": [
+    "###############",
+    "#A..##..#.....#",
+    "#.##.#..###.#.#",
+    "#.#..#......#.#",
+    "#.#.####.##.#.#",
+    "#...#....#..#.#",
+    "###.#.##.#.##.#",
+    "#.....#..#....#",
+    "#.######.###..#",
+    "#...#....#.##.#",
+    "##.#.#.####.#.#",
+    "#..#.#....#...#",
+    "#.##.###.###..#",
+    "#.....#....#G.#",
+    "###############"
+  ]
+}

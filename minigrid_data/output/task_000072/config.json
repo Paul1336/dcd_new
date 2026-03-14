@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 24,
+  "interior_walls": 68,
+  "description": "Zigzag corridors force the agent to detour around multiple wall sections to reach the goal in the bottom-right.",
+  "ascii": [
+    "###############",
+    "#A..#...#.....#",
+    "#.#.#.#.#.###.#",
+    "#.#...#.#.#...#",
+    "#.###.#.#.#.###",
+    "#...#.#.#.#...#",
+    "###.#.#.#.#.#.#",
+    "#...#...#...#.#",
+    "#.#####.###.#.#",
+    "#.....#.....#.#",
+    "###.#.#####.#.#",
+    "#...#.....#...#",
+    "#.###.###.#.###",
+    "#.....#...#..G#",
+    "###############"
+  ]
+}

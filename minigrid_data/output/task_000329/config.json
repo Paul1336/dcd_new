@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 44,
+  "interior_walls": 71,
+  "description": "Winding corridors and strategic wall blocks force the agent on a zigzagging path to the opposite corner.",
+  "ascii": [
+    "###############",
+    "#A#....#..#...#",
+    "#.#.##.#.##.#.#",
+    "#.#....#.....##",
+    "#.###.#######.#",
+    "#...#.....#...#",
+    "###.#.###.###.#",
+    "#...#.#.....#.#",
+    "#.###.#.#####.#",
+    "#.....#.#...#.#",
+    "#.#####.#.#.#.#",
+    "#...#.....#...#",
+    "##.#.#######.##",
+    "#...#.....#..G#",
+    "###############"
+  ]
+}
