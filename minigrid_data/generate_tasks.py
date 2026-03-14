@@ -56,16 +56,16 @@ def ascii_to_encoding(rows: list, size: int):
             cell = _CHAR_TO_CELL.get(ch)
             if cell is None:
                 return None
-            enc[r, c] = cell
+            enc[c, r] = cell  # col-major: enc[x, y] matches set_encoding's grid.set(i, j) convention
     return enc
 
 
 def encoding_to_ascii(enc: np.ndarray) -> list:
-    """Convert (H, W, 3) encoding back to a list of ASCII row strings."""
-    H, W, _ = enc.shape
+    """Convert (W, H, 3) col-major encoding back to a list of ASCII row strings."""
+    W, H, _ = enc.shape
     rows = []
     for r in range(H):
-        rows.append(''.join(_IDX_TO_CHAR.get(int(enc[r, c, 0]), '?') for c in range(W)))
+        rows.append(''.join(_IDX_TO_CHAR.get(int(enc[c, r, 0]), '?') for c in range(W)))
     return rows
 
 
