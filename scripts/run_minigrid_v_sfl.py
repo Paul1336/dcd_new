@@ -65,14 +65,18 @@ PARAMS = {
     'log_grad_norm':                        True,
 }
 
-# Applied when --procedural is set: use adversarial procedural env.
 PROCEDURAL_OVERRIDES = {
     'env_name':                     'MultiGrid-GoalLastAdversarial-v0',
     'learnability_staleness':       0.5,
     'top_k_to_sample_uniformly':    100,
 }
 
-# Applied when --test is set: tiny run for smoke-testing.
+GYM_OVERRIDES = {
+    'gymMaze':      {'env_name': 'MiniGrid-MazeS11-v0'},
+    'gymCrossing':  {'env_name': 'MiniGrid-SimpleCrossingS11N5-v0'},
+    'gymFourRooms': {'env_name': 'MiniGrid-FourRooms-v0'},
+}
+
 TEST_OVERRIDES = {
     'num_processes':                        2,
     'num_env_steps':                        2048,
@@ -91,10 +95,13 @@ BASE_SEED  = 88
 NUM_TRIALS = 3
 
 
-def build_cmd(seed, device, log_dir, method, exp_name, procedural=False, test=False):
+def build_cmd(seed, device, log_dir, method, exp_name, wandb_group=None,
+              variant='V', test=False):
     params = dict(PARAMS)
-    if procedural:
+    if variant == 'P':
         params.update(PROCEDURAL_OVERRIDES)
+    elif variant in GYM_OVERRIDES:
+        params.update(GYM_OVERRIDES[variant])
     if test:
         params.update(TEST_OVERRIDES)
     cmd = ['python', 'train.py']
@@ -107,6 +114,8 @@ def build_cmd(seed, device, log_dir, method, exp_name, procedural=False, test=Fa
         f'--method={method}',
         f'--exp_name={exp_name}',
     ]
+    if wandb_group:
+        cmd.append(f'--wandb_group={wandb_group}')
     return ' '.join(str(x) for x in cmd)
 
 
@@ -133,44 +142,50 @@ def run_parallel(cmds):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--device',     type=str, default='cuda:0')
-    parser.add_argument('--log_dir',    type=str, default='~/logs/dcd/')
-    parser.add_argument('--method',     type=str, default=None,
-                        help='W&B method tag. Defaults to MultiGrid-{V,P}-SFL.')
-    parser.add_argument('--exp_name',   type=str, default=None,
-                        help='Experiment name. Defaults to minigrid_{v,p}_sfl.')
-    parser.add_argument('--test',       action='store_true',
-                        help='Smoke-test: tiny dataset + few steps, 1 trial, no confirm prompt.')
-    parser.add_argument('--procedural', action='store_true',
-                        help='Use procedural env (MultiGrid-GoalLastAdversarial-v0) instead of VLM tasks.')
+    parser.add_argument('--device',       type=str, default='cuda:0')
+    parser.add_argument('--log_dir',      type=str, default='~/logs/dcd/')
+    parser.add_argument('--method',       type=str, default=None)
+    parser.add_argument('--exp_name',     type=str, default=None)
+    parser.add_argument('--wandb_group',  type=str, default=None)
+    parser.add_argument('--test',         action='store_true')
+    parser.add_argument('--procedural',   action='store_true',
+                        help='Random procedural env (MultiGrid-GoalLastAdversarial-v0).')
+    parser.add_argument('--gymMaze',      action='store_true',
+                        help='Train on official MiniGrid-MazeS11-v0.')
+    parser.add_argument('--gymCrossing',  action='store_true',
+                        help='Train on official MiniGrid-SimpleCrossingS11N5-v0.')
+    parser.add_argument('--gymFourRooms', action='store_true',
+                        help='Train on official MiniGrid-FourRooms-v0.')
     args = parser.parse_args()
 
-    variant = 'P' if args.procedural else 'V'
+    gym_flags = {'gymMaze': args.gymMaze, 'gymCrossing': args.gymCrossing,
+                 'gymFourRooms': args.gymFourRooms}
+    if sum(gym_flags.values()) + args.procedural > 1:
+        parser.error('--procedural, --gymMaze, --gymCrossing, --gymFourRooms are mutually exclusive.')
+
+    if args.procedural:
+        variant = 'P'
+    else:
+        variant = next((k for k, v in gym_flags.items() if v), 'V')
+
     if args.method is None:
         args.method = f'MultiGrid-{variant}-SFL'
     if args.exp_name is None:
         args.exp_name = f'minigrid_{variant.lower()}_sfl'
 
     num_trials = 1 if args.test else NUM_TRIALS
-
     cmds = [
-        build_cmd(
-            seed=BASE_SEED + i,
-            device=args.device,
-            log_dir=args.log_dir,
-            method=args.method,
-            exp_name=args.exp_name,
-            procedural=args.procedural,
-            test=args.test,
-        )
+        build_cmd(seed=BASE_SEED + i, device=args.device, log_dir=args.log_dir,
+                  method=args.method, exp_name=args.exp_name,
+                  wandb_group=args.wandb_group, variant=variant, test=args.test)
         for i in range(num_trials)
     ]
 
     mode_parts = []
     if args.test:
         mode_parts.append('TEST')
-    if args.procedural:
-        mode_parts.append('Procedural')
+    if variant != 'V':
+        mode_parts.append(variant)
     mode_label = f' [{", ".join(mode_parts)}]' if mode_parts else ''
 
     print(f'=== {num_trials} trial(s) (seeds {BASE_SEED}–{BASE_SEED + num_trials - 1}){mode_label} ===\n')

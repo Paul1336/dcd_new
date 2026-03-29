@@ -85,6 +85,36 @@ def _create_iphyre_vlm_env(args):
     return venv, venv
 
 
+def _create_official_minigrid_env(args):
+    """Create ParallelAdversarialVecEnv for official Farama MiniGrid envs.
+
+    Uses OfficialMiniGridTrainingEnv which bridges the new gym API to old,
+    and exposes reset_random / reset_to_level / encoding for PLR/SFL runners.
+    Obs is a plain numpy array (H, W, C), so obs_key=None in VecPreprocessImageWrapper.
+    """
+    from env.benchmark.minigrid.official_wrapper import OfficialMiniGridTrainingEnv
+    from .wrapper import VecPreprocessImageWrapper
+
+    env_id = args.env_name
+
+    def make_env():
+        return OfficialMiniGridTrainingEnv(env_id, base_seed=0)
+
+    make_fns = [make_env for _ in range(args.num_processes)]
+    venv = ParallelAdversarialVecEnv(make_fns, adversary=False)
+
+    venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
+    venv = VecNormalize(venv=venv, ob=False, ret=args.normalize_returns)
+    venv = VecPreprocessImageWrapper(
+        venv,
+        obs_key=None,
+        transpose_order=[2, 0, 1],
+        scale=10.0,
+        device=getattr(args, 'device', None),
+    )
+    return venv, venv
+
+
 def _create_multigrid_env(args):
     from .wrapper import VecPreprocessImageWrapper
 
@@ -119,6 +149,8 @@ def create_parallel_env(args):
         venv, ued_venv = _create_iphyre_adversarial_env(args)
     elif args.env_name.startswith('MultiGrid'):
         venv, ued_venv = _create_multigrid_env(args)
+    elif args.env_name.startswith('MiniGrid'):
+        venv, ued_venv = _create_official_minigrid_env(args)
     else:
         raise ValueError(f"Unsupported env_name: {args.env_name}.")
 

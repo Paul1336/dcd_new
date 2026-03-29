@@ -7,7 +7,7 @@ import torch
 from env.registration import make as gym_make
 from env.wrapper.parallel_wrappers import SubprocVecEnv
 from interfaces import EvaluationStats
-from env.benchmark.iphyre.suites import load_test_suite
+from eval.suites import load_iphyre_test_suite, load_minigrid_test_suite, MINIGRID_SUITE_NAMES
 
 
 def create_evaluator(args, obs_encoder: Optional[Callable] = None):
@@ -96,8 +96,12 @@ class Evaluator:
             print(f"Running test suite: {test_suite_name}")
             start_time = time.time()
 
-            env_names, env_task_configs = load_test_suite(test_suite_name)
-            suite_results = self._evaluate_parallel(env_names, env_task_configs, agent)
+            if test_suite_name in MINIGRID_SUITE_NAMES:
+                env_names, env_fns = load_minigrid_test_suite(test_suite_name)
+                suite_results = self._evaluate_parallel_fns(env_names, env_fns, agent)
+            else:
+                env_names, env_task_configs = load_iphyre_test_suite(test_suite_name)
+                suite_results = self._evaluate_parallel(env_names, env_task_configs, agent)
 
             total_success_rates = []
             for env_id in env_names:
@@ -116,6 +120,75 @@ class Evaluator:
         return ev
 
     # ---------- internals ----------
+
+    def _evaluate_parallel_fns(
+        self,
+        env_names: List[str],
+        env_fns: List,
+        agent,
+        chunk_size: int = 50,
+    ) -> Dict[str, Dict[str, float]]:
+        results = {}
+        for start in range(0, len(env_names), chunk_size):
+            chunk_names = env_names[start : start + chunk_size]
+            chunk_fns   = env_fns[start : start + chunk_size]
+            results.update(self._evaluate_chunk_fns(chunk_names, chunk_fns, agent))
+        return results
+
+    @torch.no_grad()
+    def _evaluate_chunk_fns(
+        self,
+        env_names: List[str],
+        env_fns: List,
+        agent,
+    ) -> Dict[str, Dict[str, float]]:
+        n = len(env_names)
+        envs = SubprocVecEnv(env_fns, context='forkserver', is_eval=True)
+        self._opened_envs.append(envs)
+
+        episodic_returns: Dict[str, List[float]] = {name: [] for name in env_names}
+        episodic_return = torch.zeros(n)
+
+        obs = self._encode_obs(envs.reset())
+
+        hidden_size = agent.recurrent_hidden_state_size
+        rnn_hxs = torch.zeros(n, hidden_size, device=self.device)
+        if agent.is_lstm:
+            rnn_hxs = (rnn_hxs, torch.zeros_like(rnn_hxs))
+        masks = torch.ones(n, 1, device=self.device)
+
+        while True:
+            _, action, _, rnn_hxs = agent.act(obs, rnn_hxs, masks, deterministic=self.deterministic)
+
+            action_np = action.cpu().numpy()
+            obs, reward, done, _ = envs.step(action_np)
+            obs = self._encode_obs(obs)
+
+            episodic_return += torch.tensor(reward, dtype=torch.float32)
+            masks = torch.tensor(
+                [[0.0] if d else [1.0] for d in done],
+                dtype=torch.float32, device=self.device,
+            )
+
+            for i, env_name in enumerate(env_names):
+                if done[i] and len(episodic_returns[env_name]) < self.num_episodes:
+                    episodic_returns[env_name].append(episodic_return[i].item())
+                    episodic_return[i] = 0.0
+
+            if all(len(episodic_returns[name]) >= self.num_episodes for name in env_names):
+                break
+
+        envs.close()
+        self._opened_envs.remove(envs)
+
+        results = {}
+        for env_name in env_names:
+            returns = np.array(episodic_returns[env_name])
+            results[env_name] = {
+                "success_rate": float(np.mean(returns > self.solved_threshold)),
+                "mean_return": float(np.mean(returns)),
+            }
+        return results
 
     def _encode_obs(self, obs: np.ndarray) -> torch.Tensor:
         """Apply obs_encoder if present, then convert to float32 tensor."""
