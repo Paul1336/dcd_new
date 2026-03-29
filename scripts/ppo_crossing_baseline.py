@@ -14,8 +14,12 @@ Usage:
 import argparse
 import os
 import random
+import sys
 import time
 from dataclasses import dataclass
+
+# Ensure project root is on path so `env.*` imports work
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import gymnasium as gym
 import numpy as np
