@@ -105,22 +105,15 @@ class OfficialMiniGridWrapper(gym.Env):
     reset() reproduces the same layout via a fixed seed.
     """
 
-    def __init__(self, env_id: str, seed: int = 0,
-                 agent_view_size: int = 5, see_through_walls: bool = True):
-        self._env = _make_official_gymnasium_env(
-            env_id,
-            agent_view_size=agent_view_size,
-            see_through_walls=see_through_walls,
-            render_mode=None,
-        )
+    def __init__(self, env_id: str, seed: int = 0):
+        self._env = _make_official_gymnasium_env(env_id, render_mode=None)
         self._seed = seed
 
+        # Read actual image shape from the created env (each env fixes its own view size).
+        img_shape = self._env.observation_space['image'].shape  # (H, W, 3)
         self.observation_space = gym.spaces.Dict({
-            'image':     gym.spaces.Box(low=0, high=255,
-                                        shape=(agent_view_size, agent_view_size, 3),
-                                        dtype=np.uint8),
-            'direction': gym.spaces.Box(low=0, high=3,
-                                        shape=(1,), dtype=np.int64),
+            'image':     gym.spaces.Box(low=0, high=255, shape=img_shape, dtype=np.uint8),
+            'direction': gym.spaces.Box(low=0, high=3, shape=(1,), dtype=np.int64),
         })
         # Always Discrete(7) — use old gym type for compatibility with the rest of the codebase.
         self.action_space = gym.spaces.Discrete(7)
@@ -165,11 +158,8 @@ class OfficialMiniGridTrainingEnv(OfficialMiniGridWrapper):
       mutate_level()  → new random seed (simple mutation for ACCEL)
     """
 
-    def __init__(self, env_id: str, base_seed: int = 0,
-                 agent_view_size: int = 5, see_through_walls: bool = True):
-        super().__init__(env_id, seed=base_seed,
-                         agent_view_size=agent_view_size,
-                         see_through_walls=see_through_walls)
+    def __init__(self, env_id: str, base_seed: int = 0):
+        super().__init__(env_id, seed=base_seed)
         self._current_seed = base_seed
         self._np_random = np.random.RandomState(base_seed)
 
