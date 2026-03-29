@@ -116,9 +116,10 @@ class RewardShapingWrapper(gym.Wrapper):
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
-        new_pot       = self._potential()
-        shaping       = self._gamma * new_pot - self._prev_pot
+        new_pot        = self._potential()
+        shaping        = self._gamma * new_pot - self._prev_pot
         self._prev_pot = new_pot
+        info['true_reward'] = float(reward)   # unshaped reward, for logging
         return obs, reward + self._coef * shaping, terminated, truncated, info
 
 
@@ -260,8 +261,9 @@ def train(args: Args):
     )
 
     # Manual episode tracking (more reliable than RecordEpisodeStatistics in vecenv)
-    ep_ret_buf = np.zeros(args.num_envs, dtype=np.float32)
-    ep_len_buf = np.zeros(args.num_envs, dtype=np.int32)
+    ep_ret_buf      = np.zeros(args.num_envs, dtype=np.float32)  # shaped return
+    ep_true_ret_buf = np.zeros(args.num_envs, dtype=np.float32)  # unshaped return
+    ep_len_buf      = np.zeros(args.num_envs, dtype=np.int32)
 
     for iteration in range(1, args.num_iterations + 1):
         if args.anneal_lr:
@@ -272,7 +274,7 @@ def train(args: Args):
         initial_lstm = (next_lstm[0].clone(), next_lstm[1].clone())
 
         # ── Collect rollout ──────────────────────────────────────────────────
-        ep_returns, ep_lengths = [], []
+        ep_returns, ep_true_returns, ep_lengths, ep_successes = [], [], [], []
         for step in range(args.num_steps):
             global_step += args.num_envs
             obs_buf[step] = next_obs
@@ -295,15 +297,23 @@ def train(args: Args):
             rewards[step] = torch.tensor(reward, dtype=torch.float32, device=device)
             next_obs      = torch.tensor(next_obs_np, dtype=torch.float32, device=device)
 
-            ep_ret_buf += reward
-            ep_len_buf += 1
+            true_reward = infos.get('true_reward', reward) if args.reward_shaping else reward
+            ep_ret_buf      += reward
+            ep_true_ret_buf += true_reward
+            ep_len_buf      += 1
             for i, done in enumerate(np.logical_or(terminations, truncations)):
                 if done:
+                    success = bool(terminations[i])
                     ep_returns.append(float(ep_ret_buf[i]))
+                    ep_true_returns.append(float(ep_true_ret_buf[i]))
                     ep_lengths.append(int(ep_len_buf[i]))
-                    print(f"step={global_step:>8}  ep_return={ep_ret_buf[i]:.3f}  ep_len={ep_len_buf[i]}")
-                    ep_ret_buf[i] = 0.0
-                    ep_len_buf[i] = 0
+                    ep_successes.append(float(success))
+                    print(f"step={global_step:>8}  true_return={ep_true_ret_buf[i]:.3f}"
+                          f"  shaped_return={ep_ret_buf[i]:.3f}  ep_len={ep_len_buf[i]}"
+                          f"  {'SUCCESS' if success else 'timeout'}")
+                    ep_ret_buf[i]      = 0.0
+                    ep_true_ret_buf[i] = 0.0
+                    ep_len_buf[i]      = 0
 
             if "final_info" in infos:
                 for info in infos["final_info"]:
@@ -410,8 +420,10 @@ def train(args: Args):
             "global_step":                global_step,
         }
         if ep_returns:
-            log_dict["charts/mean_episodic_return"] = np.mean(ep_returns)
-            log_dict["charts/mean_episodic_length"] = np.mean(ep_lengths)
+            log_dict["charts/mean_shaped_return"] = np.mean(ep_returns)
+            log_dict["charts/mean_true_return"]   = np.mean(ep_true_returns)
+            log_dict["charts/success_rate"]       = np.mean(ep_successes)
+            log_dict["charts/mean_ep_length"]     = np.mean(ep_lengths)
         wandb.log(log_dict, step=global_step)
 
         if iteration % 10 == 0:
