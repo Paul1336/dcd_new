@@ -170,11 +170,10 @@ class Evaluator:
             results.update(self._evaluate_chunk_fns(chunk_names, chunk_fns, agent))
         return results
 
-    @staticmethod
-    def _preprocess_minigrid_obs(obs: np.ndarray) -> Dict[str, torch.Tensor]:
-        """(N,H,W,C) uint8 → {'image': tensor(N,C,H,W) float32 0-1}."""
-        t = torch.from_numpy(obs).float() / 255.0   # (N,H,W,C)
-        return {'image': t.permute(0, 3, 1, 2)}     # (N,C,H,W)
+    def _preprocess_minigrid_obs(self, obs: np.ndarray) -> Dict[str, torch.Tensor]:
+        """(N,H,W,C) uint8 → {'image': tensor(N,C,H,W) float32 0-1} on self.device."""
+        t = torch.from_numpy(obs).float() / 255.0          # (N,H,W,C) CPU
+        return {'image': t.permute(0, 3, 1, 2).to(self.device)}  # (N,C,H,W) GPU
 
     @torch.no_grad()
     def _evaluate_chunk_fns(
