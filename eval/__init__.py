@@ -8,7 +8,7 @@ import torch
 from env.registration import make as gym_make
 from env.wrapper.parallel_wrappers import SubprocVecEnv
 from interfaces import EvaluationStats
-from eval.suites import load_iphyre_test_suite, load_minigrid_test_suite, MINIGRID_SUITE_NAMES
+from eval.suites import load_iphyre_test_suite, load_minigrid_test_suite, get_minigrid_suite_metadata, MINIGRID_SUITE_NAMES
 
 
 def create_evaluator(args, obs_encoder: Optional[Callable] = None):
@@ -86,13 +86,23 @@ class Evaluator:
         # Pre-load and cache all minigrid suites so every eval uses the same
         # fixed set of tasks (suites are deterministic via base_seed=0).
         self._minigrid_suite_cache: Dict[str, tuple] = {}
+        suite_config: Dict[str, object] = {}
         for name in test_suite_names:
             if name in MINIGRID_SUITE_NAMES:
                 self._minigrid_suite_cache[name] = load_minigrid_test_suite(
                     name, num_tasks=self.suite_num_tasks
                 )
-                print(f"[Evaluator] Loaded suite {name}: "
-                      f"{len(self._minigrid_suite_cache[name][0])} levels")
+                env_names, _ = self._minigrid_suite_cache[name]
+                print(f"[Evaluator] Loaded suite {name}: {len(env_names)} levels")
+                suite_config[name] = get_minigrid_suite_metadata(name, num_tasks=self.suite_num_tasks)
+
+        if suite_config:
+            import json
+            config_path = os.path.join(log_dir, 'suite_config.json')
+            os.makedirs(log_dir, exist_ok=True)
+            with open(config_path, 'w') as f:
+                json.dump(suite_config, f, indent=2)
+            print(f"[Evaluator] Suite config saved → {config_path}")
 
     def close(self):
         for e in self._opened_envs:
@@ -129,11 +139,12 @@ class Evaluator:
             if test_suite_name in MINIGRID_SUITE_NAMES:
                 env_names, env_fns = self._minigrid_suite_cache[test_suite_name]
                 suite_results = self._evaluate_parallel_fns(env_names, env_fns, agent)
-                # Record one trajectory per suite for visual inspection
-                try:
-                    self._record_trajectory(env_fns[0], agent, test_suite_name, env_names[0])
-                except Exception as e:
-                    print(f"[Trajectory] Warning: failed for {test_suite_name}: {e}")
+                # Record first and last level trajectory per suite
+                for idx in ([0, -1] if len(env_fns) > 1 else [0]):
+                    try:
+                        self._record_trajectory(env_fns[idx], agent, test_suite_name, env_names[idx])
+                    except Exception as e:
+                        print(f"[Trajectory] Warning: failed for {test_suite_name}[{idx}]: {e}")
             else:
                 env_names, env_task_configs = load_iphyre_test_suite(test_suite_name)
                 suite_results = self._evaluate_parallel(env_names, env_task_configs, agent)

@@ -13,8 +13,9 @@ Supported suite names
   MultiGrid-Maze-v0              : official MiniGrid Maze (fixed seeds)
 """
 
+import os
 import random
-from typing import List, Callable, Tuple
+from typing import Dict, List, Callable, Tuple
 
 import numpy as np
 
@@ -160,6 +161,40 @@ def _make_official_suite(
 # -----------------------------------------------------------------------
 # Public API
 # -----------------------------------------------------------------------
+
+def get_minigrid_suite_metadata(
+    suite_name: str,
+    num_tasks: int = _SUITE_NUM_TASKS,
+) -> Dict[str, object]:
+    """Return a metadata dict {level_name: info} describing each level's origin."""
+    if suite_name == 'MultiGrid-VLMSampled-v0':
+        paths = []
+        for task_dir in vlm_task_dir_list:
+            if not os.path.isdir(task_dir):
+                continue
+            for name in sorted(os.listdir(task_dir)):
+                enc_path = os.path.join(task_dir, name, 'encoding.npy')
+                if os.path.isfile(enc_path):
+                    paths.append(enc_path)
+        rng = random.Random(_BASE_SEED)
+        sampled = rng.sample(paths, num_tasks) if len(paths) > num_tasks else paths
+        return {f'vlm_{i:04d}': p for i, p in enumerate(sampled)}
+
+    if suite_name == 'MultiGrid-RandomGenerated-v0':
+        return {
+            f'random_{i:04d}': {'env': 'MultiGrid-GoalLastAdversarial-v0', 'base_seed': _BASE_SEED, 'index': i}
+            for i in range(num_tasks)
+        }
+
+    if suite_name in _OFFICIAL_ENV_IDS:
+        official_env_id, short = _OFFICIAL_ENV_IDS[suite_name]
+        return {
+            f'{short}_seed{i:04d}': {'env': official_env_id, 'seed': _BASE_SEED + i}
+            for i in range(num_tasks)
+        }
+
+    return {}
+
 
 def load_minigrid_test_suite(
     suite_name: str,
