@@ -259,6 +259,10 @@ def train(args: Args):
         torch.zeros(1, args.num_envs, args.lstm_hidden, device=device),
     )
 
+    # Manual episode tracking (more reliable than RecordEpisodeStatistics in vecenv)
+    ep_ret_buf = np.zeros(args.num_envs, dtype=np.float32)
+    ep_len_buf = np.zeros(args.num_envs, dtype=np.int32)
+
     for iteration in range(1, args.num_iterations + 1):
         if args.anneal_lr:
             frac = 1.0 - (iteration - 1) / args.num_iterations
@@ -290,6 +294,16 @@ def train(args: Args):
             )
             rewards[step] = torch.tensor(reward, dtype=torch.float32, device=device)
             next_obs      = torch.tensor(next_obs_np, dtype=torch.float32, device=device)
+
+            ep_ret_buf += reward
+            ep_len_buf += 1
+            for i, done in enumerate(np.logical_or(terminations, truncations)):
+                if done:
+                    ep_returns.append(float(ep_ret_buf[i]))
+                    ep_lengths.append(int(ep_len_buf[i]))
+                    print(f"step={global_step:>8}  ep_return={ep_ret_buf[i]:.3f}  ep_len={ep_len_buf[i]}")
+                    ep_ret_buf[i] = 0.0
+                    ep_len_buf[i] = 0
 
             if "final_info" in infos:
                 for info in infos["final_info"]:
