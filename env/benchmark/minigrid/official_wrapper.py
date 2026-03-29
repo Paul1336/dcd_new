@@ -26,14 +26,14 @@ class OfficialMiniGridWrapper(gym.Env):
     def __init__(self, env_id: str, seed: int = 0,
                  agent_view_size: int = 5, see_through_walls: bool = True):
         try:
-            import minigrid  # noqa: F401 — just to confirm it's installed
+            import minigrid  # noqa: F401 — triggers gymnasium registration of all MiniGrid envs
         except ImportError:
             raise ImportError(
                 "Official 'minigrid' (Farama) package not found.\n"
                 "Install with:  pip install minigrid"
             )
-        import gym as _gym
-        self._env = _gym.make(
+        import gymnasium as _gymnasium
+        self._env = _gymnasium.make(
             env_id,
             agent_view_size=agent_view_size,
             see_through_walls=see_through_walls,
@@ -46,8 +46,8 @@ class OfficialMiniGridWrapper(gym.Env):
             shape=(agent_view_size, agent_view_size, 3),
             dtype=np.uint8,
         )
-        # Preserve the official env's action space (Discrete(7)) unchanged.
-        self.action_space = self._env.action_space
+        # Always Discrete(7) — use old gym type for compatibility with the rest of the codebase.
+        self.action_space = gym.spaces.Discrete(7)
 
     # ------------------------------------------------------------------
     # gym interface (old API)
