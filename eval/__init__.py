@@ -150,6 +150,7 @@ class Evaluator:
             print(f"Test suite {test_suite_name} average success rate: {mean_sr}")
             print(f"Time taken: {time.time() - start_time:.1f}s")
 
+        agent.train()
         ev = EvaluationStats()
         ev.extra = stats
         return ev
