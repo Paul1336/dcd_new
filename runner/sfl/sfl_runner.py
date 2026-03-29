@@ -37,7 +37,7 @@ class SFLRunner(Runner):
         # --- learnability sampler ---
         from .learnability import _VLM_ENV_NAMES
         self._vlm_mode = args.env_name in _VLM_ENV_NAMES
-        self._is_multigrid = args.env_name.startswith('MultiGrid')
+        self._is_multigrid = args.env_name.startswith('MultiGrid') or args.env_name.startswith('MiniGrid')
         self.learnability_sampler = LearnabilitySampler(
             venv=venv,
             learnability_alpha=args.learnability_alpha,
