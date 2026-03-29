@@ -1,5 +1,5 @@
 from .registration import make as gym_make
-from .wrapper import ParallelAdversarialVecEnv, VecNormalize, VecMonitor, VecPreprocessImageWrapper, VecCLIPEmbeddingWrapper
+from .wrapper import ParallelAdversarialVecEnv, VecNormalize, VecMonitor, VecPreprocessImageWrapper, VecCLIPEmbeddingWrapper, MiniGridShapingWrapper
 
 
 _VLM_ENV_TASK_DIRS = {
@@ -96,9 +96,15 @@ def _create_official_minigrid_env(args):
     from .wrapper import VecPreprocessImageWrapper
 
     env_id = args.env_name
+    use_shaping = getattr(args, 'reward_shaping', False)
+    shaping_coef = getattr(args, 'shaping_coef', 0.5)
+    gamma = getattr(args, 'gamma', 0.99)
 
     def make_env():
-        return OfficialMiniGridTrainingEnv(env_id, base_seed=0)
+        env = OfficialMiniGridTrainingEnv(env_id, base_seed=0)
+        if use_shaping:
+            env = MiniGridShapingWrapper(env, gamma=gamma, coef=shaping_coef)
+        return env
 
     make_fns = [make_env for _ in range(args.num_processes)]
     venv = ParallelAdversarialVecEnv(make_fns, adversary=False)
@@ -118,10 +124,17 @@ def _create_official_minigrid_env(args):
 def _create_multigrid_env(args):
     from .wrapper import VecPreprocessImageWrapper
 
+    use_shaping = getattr(args, 'reward_shaping', False)
+    shaping_coef = getattr(args, 'shaping_coef', 0.5)
+    gamma = getattr(args, 'gamma', 0.99)
+
     def make_env():
         import env.benchmark.minigrid  # noqa: F401 — triggers gym registrations in worker
         from .registration import make as _make
-        return _make(args.env_name)
+        env = _make(args.env_name)
+        if use_shaping:
+            env = MiniGridShapingWrapper(env, gamma=gamma, coef=shaping_coef)
+        return env
 
     make_fns = [make_env for _ in range(args.num_processes)]
     venv = ParallelAdversarialVecEnv(make_fns, adversary=False)

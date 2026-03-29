@@ -580,7 +580,11 @@ class Parser:
         self.parser.add_argument(
             '--reward_shaping',
             type=str2bool, nargs='?', const=True, default=False,
-            help="Use custom shaped rewards for CarRacing.")
+            help="Use potential-based reward shaping for MiniGrid envs.")
+        self.parser.add_argument(
+            '--shaping_coef',
+            type=float, default=0.5,
+            help="Coefficient for reward shaping bonus (default 0.5).")
         self.parser.add_argument(
             '--num_action_repeat',
             type=int, default=1,
