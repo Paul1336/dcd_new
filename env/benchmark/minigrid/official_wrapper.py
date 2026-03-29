@@ -115,11 +115,13 @@ class OfficialMiniGridWrapper(gym.Env):
         )
         self._seed = seed
 
-        self.observation_space = gym.spaces.Box(
-            low=0, high=255,
-            shape=(agent_view_size, agent_view_size, 3),
-            dtype=np.uint8,
-        )
+        self.observation_space = gym.spaces.Dict({
+            'image':     gym.spaces.Box(low=0, high=255,
+                                        shape=(agent_view_size, agent_view_size, 3),
+                                        dtype=np.uint8),
+            'direction': gym.spaces.Box(low=0, high=3,
+                                        shape=(1,), dtype=np.int64),
+        })
         # Always Discrete(7) — use old gym type for compatibility with the rest of the codebase.
         self.action_space = gym.spaces.Discrete(7)
 
@@ -127,14 +129,20 @@ class OfficialMiniGridWrapper(gym.Env):
     # gym interface (old API)
     # ------------------------------------------------------------------
 
+    def _extract_obs(self, obs_dict) -> dict:
+        return {
+            'image':     obs_dict['image'],
+            'direction': np.array([obs_dict['direction']], dtype=np.int64),
+        }
+
     def reset(self, **kwargs):
         obs_dict, _ = self._env.reset(seed=self._seed)
-        return obs_dict['image']
+        return self._extract_obs(obs_dict)
 
     def step(self, action):
         obs_dict, reward, terminated, truncated, info = self._env.step(int(action))
         done = terminated or truncated
-        return obs_dict['image'], float(reward), done, info
+        return self._extract_obs(obs_dict), float(reward), done, info
 
     def close(self):
         self._env.close()

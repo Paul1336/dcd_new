@@ -107,7 +107,7 @@ def _create_official_minigrid_env(args):
     venv = VecNormalize(venv=venv, ob=False, ret=args.normalize_returns)
     venv = VecPreprocessImageWrapper(
         venv,
-        obs_key=None,
+        obs_key='image',
         transpose_order=[2, 0, 1],
         scale=10.0,
         device=getattr(args, 'device', None),

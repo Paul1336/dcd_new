@@ -32,7 +32,7 @@ def build_model(env_name, env, agent_type="agent", **kwargs):
             agent_type=agent_type,
             obs_type=kwargs.get("obs_type", "symbolic"),
             should_freeze_embedding=kwargs.get("should_freeze_embedding", False))
-    elif env_name.startswith("MultiGrid"):
+    elif env_name.startswith("MultiGrid") or env_name.startswith("MiniGrid"):
         return model_for_multigrid_agent(
             env=env,
             agent_type=agent_type,
