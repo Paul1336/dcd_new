@@ -105,8 +105,11 @@ class OfficialMiniGridWrapper(gym.Env):
     reset() reproduces the same layout via a fixed seed.
     """
 
-    def __init__(self, env_id: str, seed: int = 0):
-        self._env = _make_official_gymnasium_env(env_id, render_mode=None)
+    def __init__(self, env_id: str, seed: int = 0, agent_view_size: int = None):
+        kwargs = {'render_mode': None}
+        if agent_view_size is not None:
+            kwargs['agent_view_size'] = agent_view_size
+        self._env = _make_official_gymnasium_env(env_id, **kwargs)
         self._seed = seed
 
         # Read actual image shape from the created env (each env fixes its own view size).
