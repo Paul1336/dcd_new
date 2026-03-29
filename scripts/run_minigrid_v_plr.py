@@ -51,7 +51,7 @@ PARAMS = {
     'use_reset_random_dr':          False,
 
     # Evaluation
-    'test_env_names':               'MultiGrid-VLMSampled-v0,MultiGrid-RandomGenerated-v0,MultiGrid-FourRooms-v0,MultiGrid-SimpleCrossing-v0,MultiGrid-Maze-v0',
+    'test_env_names':               'MultiGrid-VLMSampled-v0,MultiGrid-RandomGenerated-v0,MultiGrid-FourRooms-v0,MultiGrid-SimpleCrossing-v0',
     'test_interval':                20,
     'test_num_episodes':            10,
     'test_num_processes':           1,
