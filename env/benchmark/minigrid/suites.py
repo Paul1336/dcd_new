@@ -76,6 +76,9 @@ class _FixedLevelEnv:
     def step(self, action):
         return self._env.step(action)  # full dict obs
 
+    def render(self, mode='rgb_array', **kwargs):
+        return self._env.render(mode=mode, **kwargs)
+
     def close(self):
         self._env.close()
 

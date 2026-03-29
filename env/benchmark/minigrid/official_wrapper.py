@@ -106,7 +106,7 @@ class OfficialMiniGridWrapper(gym.Env):
     """
 
     def __init__(self, env_id: str, seed: int = 0, agent_view_size: int = None):
-        kwargs = {'render_mode': None}
+        kwargs = {'render_mode': 'rgb_array'}
         if agent_view_size is not None:
             kwargs['agent_view_size'] = agent_view_size
         self._env = _make_official_gymnasium_env(env_id, **kwargs)
@@ -139,6 +139,9 @@ class OfficialMiniGridWrapper(gym.Env):
         obs_dict, reward, terminated, truncated, info = self._env.step(int(action))
         done = terminated or truncated
         return self._extract_obs(obs_dict), float(reward), done, info
+
+    def render(self, mode='rgb_array', **kwargs):
+        return self._env.render()
 
     def close(self):
         self._env.close()

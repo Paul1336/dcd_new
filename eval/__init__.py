@@ -276,29 +276,27 @@ class Evaluator:
             rnn_hxs = (rnn_hxs, torch.zeros_like(rnn_hxs))
         masks = torch.ones(1, 1, device=self.device)
 
-        # MiniGrid symbolic obs: channel-0 = object_idx (0-10), NOT RGB.
-        # Map object indices to distinct RGB colours so the GIF is viewable.
-        _OBJ_RGB = np.array([
-            [ 32,  32,  32],  # 0  unseen      — dark grey
-            [230, 230, 230],  # 1  empty        — light grey
-            [ 80,  80,  80],  # 2  wall         — medium grey
-            [200, 200, 200],  # 3  floor        — light grey
-            [160, 100,  40],  # 4  door         — brown
-            [255, 255,   0],  # 5  key          — yellow
-            [  0, 200, 200],  # 6  ball         — cyan
-            [200,  70,   0],  # 7  box          — orange
-            [  0, 200,   0],  # 8  goal         — green
-            [255, 100,   0],  # 9  lava         — red-orange
-            [255,   0,   0],  # 10 agent        — red
-        ], dtype=np.uint8)
-
-        def _to_frame(raw) -> np.ndarray:
-            """Symbolic (H,W,3) obs → viewable RGB (H,W,3) uint8."""
+        def _to_frame() -> np.ndarray:
+            """Full-grid RGB render from env.render(); returns (H,W,3) uint8."""
+            try:
+                frame = env.render(mode='rgb_array')
+                if frame is not None and isinstance(frame, np.ndarray):
+                    return frame
+            except Exception:
+                pass
+            # fallback: colour symbolic obs by object type
+            raw = raw_obs
             img = raw['image'] if isinstance(raw, dict) else raw
             if isinstance(img, torch.Tensor):
                 img = img.cpu().numpy()
+            _OBJ_RGB = np.array([
+                [ 32,  32,  32], [230, 230, 230], [ 80,  80,  80],
+                [200, 200, 200], [160, 100,  40], [255, 255,   0],
+                [  0, 200, 200], [200,  70,   0], [  0, 200,   0],
+                [255, 100,   0], [255,   0,   0],
+            ], dtype=np.uint8)
             obj_idx = img[:, :, 0].clip(0, len(_OBJ_RGB) - 1)
-            return _OBJ_RGB[obj_idx]  # (H,W,3) proper RGB
+            return _OBJ_RGB[obj_idx]
 
         def _to_agent_obs(raw) -> Dict:
             """Single env obs → agent-ready dict with batch dim=1 on device."""
@@ -322,27 +320,20 @@ class Evaluator:
                 t = torch.from_numpy(img).float() / 255.0
                 return {'image': t.unsqueeze(0).permute(0, 3, 1, 2).to(self.device)}
 
-        frames.append(_to_frame(raw_obs))
+        frames.append(_to_frame())
         obs = _to_agent_obs(raw_obs)
 
         for _ in range(300):
             _, action, _, rnn_hxs = agent.act(obs, rnn_hxs, masks, deterministic=True)
             raw_obs, _, done, _ = env.step(int(action.cpu().item()))
-            frames.append(_to_frame(raw_obs))
+            frames.append(_to_frame())
             obs = _to_agent_obs(raw_obs)
             masks = torch.zeros(1, 1, device=self.device) if done else masks
             if done:
                 break
         env.close()
 
-        # upscale each frame (MinGrid obs is 7×7, hard to see)
-        scale = 16
-        pil_frames = [
-            PILImage.fromarray(f).resize(
-                (f.shape[1] * scale, f.shape[0] * scale), PILImage.NEAREST
-            )
-            for f in frames
-        ]
+        pil_frames = [PILImage.fromarray(f) for f in frames]
 
         # safe filename
         safe_suite = suite_name.replace('/', '-')

@@ -94,7 +94,7 @@ TEST_OVERRIDES = {
     'num_mini_batch':                       1,
     'learnability_buffer_size':             10,
     'update_learnability_every_iterations': 2,
-    'test_interval':                        2,
+    'test_interval':                        100,
     'test_num_episodes':                    1,
     'test_suite_num_tasks':                 3,
     'vlm_env_max_tasks':                    20,

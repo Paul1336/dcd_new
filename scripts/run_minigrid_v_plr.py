@@ -81,7 +81,7 @@ TEST_OVERRIDES = {
     'num_steps':                    128,
     'ppo_epoch':                    1,
     'num_mini_batch':               1,
-    'test_interval':                2,
+    'test_interval':                100,
     'test_num_episodes':            1,
     'test_suite_num_tasks':         3,
     'vlm_env_max_tasks':            20,
