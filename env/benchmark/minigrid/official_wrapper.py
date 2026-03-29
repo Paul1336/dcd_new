@@ -9,11 +9,82 @@ single seed so every reset() reproduces the same layout.
 Action space is kept at Discrete(7) matching our fork's action indices:
   0=left 1=right 2=forward 3=pickup 4=drop 5=toggle 6=done
 Pickup/drop/toggle are harmless no-ops in maze-only environments.
+
+NOTE: dcd_new/minigrid/ is a local fork that shadows the installed Farama
+minigrid package on sys.path.  _make_official_gymnasium_env() temporarily
+swaps in the site-packages version so that official MiniGrid envs can be
+created without renaming the local fork.
 """
 
+import os
+import sys
 import numpy as np
 import gym
 
+# -------------------------------------------------------------------------
+# Helpers to create a gymnasium env from the *installed* Farama minigrid,
+# bypassing the local dcd_new/minigrid/ fork that shadows it on sys.path.
+# -------------------------------------------------------------------------
+
+_official_minigrid_registered = False
+
+
+def _find_site_minigrid_dir() -> str:
+    """Return the site-packages directory that contains the official minigrid."""
+    for p in sys.path:
+        if 'site-packages' in p:
+            if os.path.isdir(os.path.join(p, 'minigrid', 'envs')):
+                return p
+    raise ImportError(
+        "Official Farama 'minigrid' not found in site-packages.\n"
+        "Install with:  pip install minigrid"
+    )
+
+
+def _ensure_official_minigrid_registered():
+    """
+    Import minigrid.envs from site-packages to register all official MiniGrid
+    envs with gymnasium.  Only runs once per process.
+    """
+    global _official_minigrid_registered
+    if _official_minigrid_registered:
+        return
+
+    sp = _find_site_minigrid_dir()
+
+    # Stash and remove every 'minigrid*' entry from sys.modules so that the
+    # subsequent import picks up the site-packages version, not the local fork.
+    stashed = {k: sys.modules.pop(k)
+               for k in list(sys.modules)
+               if k == 'minigrid' or k.startswith('minigrid.')}
+
+    sys.path.insert(0, sp)
+    try:
+        import minigrid.envs  # noqa: F401 — registers all official envs with gymnasium
+    finally:
+        # Remove the prepended path.
+        if sys.path and sys.path[0] == sp:
+            sys.path.pop(0)
+        # Remove the official minigrid modules we just loaded …
+        for k in list(sys.modules):
+            if k == 'minigrid' or k.startswith('minigrid.'):
+                del sys.modules[k]
+        # … and restore the local fork.
+        sys.modules.update(stashed)
+
+    _official_minigrid_registered = True
+
+
+def _make_official_gymnasium_env(env_id: str, **kwargs):
+    """Create an official Farama MiniGrid gymnasium env."""
+    _ensure_official_minigrid_registered()
+    import gymnasium as _gymnasium
+    return _gymnasium.make(env_id, **kwargs)
+
+
+# -------------------------------------------------------------------------
+# Wrappers
+# -------------------------------------------------------------------------
 
 class OfficialMiniGridWrapper(gym.Env):
     """Wraps an official Farama MiniGrid env to match our training env interface.
@@ -25,15 +96,7 @@ class OfficialMiniGridWrapper(gym.Env):
 
     def __init__(self, env_id: str, seed: int = 0,
                  agent_view_size: int = 5, see_through_walls: bool = True):
-        try:
-            import minigrid  # noqa: F401 — triggers gymnasium registration of all MiniGrid envs
-        except ImportError:
-            raise ImportError(
-                "Official 'minigrid' (Farama) package not found.\n"
-                "Install with:  pip install minigrid"
-            )
-        import gymnasium as _gymnasium
-        self._env = _gymnasium.make(
+        self._env = _make_official_gymnasium_env(
             env_id,
             agent_view_size=agent_view_size,
             see_through_walls=see_through_walls,

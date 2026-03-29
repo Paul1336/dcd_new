@@ -70,7 +70,7 @@ PROCEDURAL_OVERRIDES = {
 }
 
 GYM_OVERRIDES = {
-    'gymMaze':      {'env_name': 'MiniGrid-MazeS11-v0'},
+    'gymMaze':      {'env_name': 'MiniGrid-WFC-MazeSimple-v0'},
     'gymCrossing':  {'env_name': 'MiniGrid-SimpleCrossingS11N5-v0'},
     'gymFourRooms': {'env_name': 'MiniGrid-FourRooms-v0'},
 }
@@ -147,7 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--procedural',   action='store_true',
                         help='Random procedural env (MultiGrid-GoalLastAdversarial-v0).')
     parser.add_argument('--gymMaze',      action='store_true',
-                        help='Train on official MiniGrid-MazeS11-v0.')
+                        help='Train on official MiniGrid-WFC-MazeSimple-v0.')
     parser.add_argument('--gymCrossing',  action='store_true',
                         help='Train on official MiniGrid-SimpleCrossingS11N5-v0.')
     parser.add_argument('--gymFourRooms', action='store_true',

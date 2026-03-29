@@ -40,7 +40,7 @@ _BASE_SEED = 0
 _OFFICIAL_ENV_IDS = {
     'MultiGrid-FourRooms-v0':       ('MiniGrid-FourRooms-v0',          'fourrooms'),
     'MultiGrid-SimpleCrossing-v0':  ('MiniGrid-SimpleCrossingS11N5-v0', 'simplecrossing'),
-    'MultiGrid-Maze-v0':            ('MiniGrid-MazeS11-v0',             'maze'),
+    'MultiGrid-Maze-v0':            ('MiniGrid-WFC-MazeSimple-v0',             'maze'),
 }
 
 # -----------------------------------------------------------------------
