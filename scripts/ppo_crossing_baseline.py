@@ -70,7 +70,7 @@ class Args:
     shaping_coef: float = 0.5
 
     # Eval
-    eval_interval: int = 100        # iterations between eval runs (0 = no eval)
+    eval_interval: int = 20        # iterations between eval runs (0 = no eval)
     test_num_tasks: int = 10        # levels per suite
     test_env_names: str = (
         'MultiGrid-VLMSampled-v0,'
