@@ -140,9 +140,10 @@ class OfficialMiniGridWrapper(gym.Env):
         self._env.close()
 
     # ------------------------------------------------------------------
-    # Spec (required by SubprocVecEnv.get_spaces_spec)
+    # Attributes queried by SubprocVecEnv during initialisation
     # ------------------------------------------------------------------
     spec = None
+    processed_action_dim = 1  # scalar (Discrete) action
 
 
 class OfficialMiniGridTrainingEnv(OfficialMiniGridWrapper):
