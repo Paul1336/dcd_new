@@ -170,10 +170,27 @@ class Evaluator:
             results.update(self._evaluate_chunk_fns(chunk_names, chunk_fns, agent))
         return results
 
-    def _preprocess_minigrid_obs(self, obs: np.ndarray) -> Dict[str, torch.Tensor]:
-        """(N,H,W,C) uint8 → {'image': tensor(N,C,H,W) float32 0-1} on self.device."""
-        t = torch.from_numpy(obs).float() / 255.0          # (N,H,W,C) CPU
-        return {'image': t.permute(0, 3, 1, 2).to(self.device)}  # (N,C,H,W) GPU
+    def _preprocess_minigrid_obs(self, obs) -> Dict[str, torch.Tensor]:
+        """Convert SubprocVecEnv obs to agent-ready tensors on self.device.
+
+        Handles two cases:
+        - dict {'image': (N,H,W,C), 'direction': (N,...), ...}  ← full obs from _FixedLevelEnv
+        - plain np.ndarray (N,H,W,C)                            ← fallback (image only)
+        """
+        if isinstance(obs, dict):
+            result = {}
+            for k, v in obs.items():
+                t = torch.from_numpy(v).to(self.device)
+                if k == 'image':
+                    t = t.float() / 255.0
+                    t = t.permute(0, 3, 1, 2)  # (N,H,W,C) → (N,C,H,W)
+                else:
+                    t = t.float()
+                result[k] = t
+            return result
+        else:
+            t = torch.from_numpy(obs).float() / 255.0
+            return {'image': t.permute(0, 3, 1, 2).to(self.device)}
 
     @torch.no_grad()
     def _evaluate_chunk_fns(
@@ -283,12 +300,26 @@ class Evaluator:
             return _OBJ_RGB[obj_idx]  # (H,W,3) proper RGB
 
         def _to_agent_obs(raw) -> Dict:
-            """(H,W,C) uint8 → {'image': tensor(1,C,H,W) float32 0-1}."""
-            img = raw['image'] if isinstance(raw, dict) else raw
-            if isinstance(img, torch.Tensor):
-                img = img.cpu().numpy()
-            t = torch.from_numpy(img).float() / 255.0
-            return {'image': t.unsqueeze(0).permute(0, 3, 1, 2).to(self.device)}
+            """Single env obs → agent-ready dict with batch dim=1 on device."""
+            if isinstance(raw, dict):
+                result = {}
+                for k, v in raw.items():
+                    if isinstance(v, torch.Tensor):
+                        v = v.cpu().numpy()
+                    t = torch.from_numpy(np.array(v)).to(self.device)
+                    if k == 'image':
+                        t = t.float() / 255.0
+                        t = t.unsqueeze(0).permute(0, 3, 1, 2)  # (1,C,H,W)
+                    else:
+                        t = t.float().unsqueeze(0)
+                    result[k] = t
+                return result
+            else:
+                img = raw
+                if isinstance(img, torch.Tensor):
+                    img = img.cpu().numpy()
+                t = torch.from_numpy(img).float() / 255.0
+                return {'image': t.unsqueeze(0).permute(0, 3, 1, 2).to(self.device)}
 
         frames.append(_to_frame(raw_obs))
         obs = _to_agent_obs(raw_obs)

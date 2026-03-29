@@ -57,27 +57,15 @@ class _FixedLevelEnv:
     def __init__(self, env, encoding: np.ndarray):
         self._env = env
         self._encoding = encoding
-        # observation_space: extract the image Box from the Dict space
-        obs_space = env.observation_space
-        if hasattr(obs_space, 'spaces') and 'image' in obs_space.spaces:
-            self.observation_space = obs_space.spaces['image']
-        else:
-            self.observation_space = obs_space
+        self.observation_space = env.observation_space  # keep full Dict space
         self.action_space = env.action_space
         self.spec = None
 
     def reset(self, **kwargs):
-        obs = self._env.reset_to_level(self._encoding)
-        # reset_to_level returns gen_obs() dict → extract image
-        if isinstance(obs, dict):
-            return obs['image']
-        return obs
+        return self._env.reset_to_level(self._encoding)  # full dict
 
     def step(self, action):
-        obs, reward, done, info = self._env.step(action)
-        if isinstance(obs, dict):
-            obs = obs['image']
-        return obs, reward, done, info
+        return self._env.step(action)  # full dict obs
 
     def close(self):
         self._env.close()
