@@ -1,14 +1,15 @@
 """
-CleanRL-style recurrent PPO (LSTM) for MiniGrid-SimpleCrossingS9N1-v0
-- Flat obs + MLP encoder + LSTM + separate actor/critic heads
-- Minibatch = group of envs processed as full sequences (required for BPTT)
-- Should converge within 1-2M steps
+CleanRL-style recurrent PPO (LSTM) for MiniGrid-SimpleCrossingS11N5-v0
+- image+direction obs (5×5×3 + 4 = 79-dim) compatible with eval suites
+- MLP encoder → LSTM → actor/critic heads
+- Minibatch = group of envs × full sequences (BPTT)
+- Periodic eval on the same test suites as the main codebase
 
 Usage:
     python scripts/ppo_crossing_baseline.py
     python scripts/ppo_crossing_baseline.py --env-id MiniGrid-SimpleCrossingS11N5-v0
     python scripts/ppo_crossing_baseline.py --reward-shaping --shaping-coef 0.5
-    python scripts/ppo_crossing_baseline.py --wandb_group my_group
+    python scripts/ppo_crossing_baseline.py --wandb_group my_group --eval-interval 100
 """
 
 import argparse
@@ -17,6 +18,7 @@ import random
 import sys
 import time
 from dataclasses import dataclass
+from typing import List
 
 # Ensure project root is on path so `env.*` imports work
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -42,16 +44,16 @@ class Args:
     wandb_group: str = None
     capture_video: bool = False
 
-    env_id: str = "MiniGrid-SimpleCrossingS9N1-v0"
+    env_id: str = "MiniGrid-SimpleCrossingS11N5-v0"
 
     total_timesteps: int = 2_000_000
     learning_rate: float = 2.5e-4
     num_envs: int = 8
-    num_steps: int = 128          # rollout length per env
+    num_steps: int = 128
     anneal_lr: bool = True
     gamma: float = 0.99
     gae_lambda: float = 0.95
-    num_minibatches: int = 4      # envs are split into this many groups
+    num_minibatches: int = 4
     update_epochs: int = 4
     norm_adv: bool = True
     clip_coef: float = 0.2
@@ -65,7 +67,17 @@ class Args:
     lstm_hidden: int = 128
 
     reward_shaping: bool = False
-    shaping_coef: float = 0.5    # weight on the potential-based bonus
+    shaping_coef: float = 0.5
+
+    # Eval
+    eval_interval: int = 100        # iterations between eval runs (0 = no eval)
+    test_num_tasks: int = 10        # levels per suite
+    test_env_names: str = (
+        'MultiGrid-VLMSampled-v0,'
+        'MultiGrid-RandomGenerated-v0,'
+        'MultiGrid-FourRooms-v0,'
+        'MultiGrid-SimpleCrossing-v0'
+    )
 
     # Derived
     batch_size: int = 0
@@ -73,21 +85,55 @@ class Args:
     num_iterations: int = 0
 
 
+# ── Obs helpers ──────────────────────────────────────────────────────────────
+
+def flat_obs(obs_dict: dict) -> np.ndarray:
+    """Convert {image:(H,W,3), direction:scalar} → float32 vector (H*W*3 + 4,)."""
+    img = obs_dict['image'].flatten().astype(np.float32)
+    d = obs_dict['direction']
+    d = int(d.flat[0]) if hasattr(d, 'flat') else int(d)
+    dir_oh = np.zeros(4, dtype=np.float32)
+    dir_oh[d] = 1.0
+    return np.concatenate([img, dir_oh])
+
+
+class MinigridFlatWrapper(gym.Wrapper):
+    """Flatten {image, direction} dict obs → (H*W*3 + 4,) float32 vector.
+
+    Replaces FlatObsWrapper: no mission-string encoding, so obs_dim stays
+    small (75 + 4 = 79 for agent_view_size=5) and matches suite env obs.
+    """
+
+    def __init__(self, env):
+        super().__init__(env)
+        img_shape = env.observation_space['image'].shape   # (H, W, 3)
+        obs_dim = int(np.prod(img_shape)) + 4
+        self.observation_space = gym.spaces.Box(
+            low=0.0, high=255.0, shape=(obs_dim,), dtype=np.float32
+        )
+
+    def reset(self, **kwargs):
+        obs_dict, info = self.env.reset(**kwargs)
+        return flat_obs(obs_dict), info
+
+    def step(self, action):
+        obs_dict, reward, terminated, truncated, info = self.env.step(action)
+        return flat_obs(obs_dict), reward, terminated, truncated, info
+
+
 # ── Reward shaping wrapper ───────────────────────────────────────────────────
 
 class RewardShapingWrapper(gym.Wrapper):
-    """Potential-based reward shaping: F(s) = -manhattan_dist(agent, goal) / max_dist.
-
-    Shaped reward = r + coef * (gamma * F(s') - F(s)).
-    Does not change the optimal policy (potential-based shaping theorem).
+    """Potential-based shaping: F(s) = -manhattan_dist(agent, goal) / (W+H).
+    shaped_reward = r + coef * (gamma * F(s') - F(s))
     """
 
     def __init__(self, env, gamma: float = 0.99, coef: float = 0.5):
         super().__init__(env)
         self._gamma = gamma
         self._coef  = coef
-        self._goal_pos   = None
-        self._prev_pot   = 0.0
+        self._goal_pos = None
+        self._prev_pot = 0.0
 
     def _find_goal(self):
         u = self.unwrapped
@@ -105,8 +151,7 @@ class RewardShapingWrapper(gym.Wrapper):
         ax, ay = u.agent_pos
         gx, gy = self._goal_pos
         dist = abs(ax - gx) + abs(ay - gy)
-        max_dist = u.width + u.height
-        return -dist / max_dist
+        return -dist / (u.width + u.height)
 
     def reset(self, **kwargs):
         result = self.env.reset(**kwargs)
@@ -119,24 +164,24 @@ class RewardShapingWrapper(gym.Wrapper):
         new_pot        = self._potential()
         shaping        = self._gamma * new_pot - self._prev_pot
         self._prev_pot = new_pot
-        info['true_reward'] = float(reward)   # unshaped reward, for logging
+        info['true_reward'] = float(reward)
         return obs, reward + self._coef * shaping, terminated, truncated, info
 
 
 # ── Environment factory ──────────────────────────────────────────────────────
 
-def make_env(env_id, seed, idx, capture_video, run_name, use_shaping=False, shaping_coef=0.5, gamma=0.99):
+def make_env(env_id, seed, idx, capture_video, run_name,
+             use_shaping=False, shaping_coef=0.5, gamma=0.99):
     def thunk():
         _ensure_official_minigrid_registered()
         if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
+            env = gym.make(env_id, render_mode="rgb_array", agent_view_size=5)
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
-            env = gym.make(env_id)
+            env = gym.make(env_id, agent_view_size=5)
         if use_shaping:
             env = RewardShapingWrapper(env, gamma=gamma, coef=shaping_coef)
-        from minigrid.wrappers import FlatObsWrapper
-        env = FlatObsWrapper(env)
+        env = MinigridFlatWrapper(env)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env.action_space.seed(seed + idx)
         return env
@@ -152,12 +197,11 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 
 class Agent(nn.Module):
-    """MLP encoder → LSTM → separate actor/critic heads."""
+    """MLP encoder → LSTM → actor/critic heads."""
 
     def __init__(self, obs_dim, n_actions, mlp_hidden=64, lstm_hidden=128):
         super().__init__()
         self.lstm_hidden = lstm_hidden
-
         self.encoder = nn.Sequential(
             layer_init(nn.Linear(obs_dim, mlp_hidden)),
             nn.Tanh(),
@@ -170,19 +214,16 @@ class Agent(nn.Module):
                 nn.init.constant_(param, 0)
             elif 'weight' in name:
                 nn.init.orthogonal_(param)
-
         self.actor  = layer_init(nn.Linear(lstm_hidden, n_actions), std=0.01)
         self.critic = layer_init(nn.Linear(lstm_hidden, 1),          std=1.0)
 
     def _lstm_step(self, x, lstm_state, done):
-        """Single-step LSTM forward. Resets hidden state where done=1."""
         h, c = lstm_state
-        # done: (N,) → reset hidden state for finished episodes
         h = h * (1.0 - done).view(1, -1, 1)
         c = c * (1.0 - done).view(1, -1, 1)
-        features = self.encoder(x)                          # (N, mlp_hidden)
+        features = self.encoder(x)
         out, (h, c) = self.lstm(features.unsqueeze(0), (h, c))
-        return out.squeeze(0), (h, c)                       # (N, lstm_hidden)
+        return out.squeeze(0), (h, c)
 
     def get_value(self, x, lstm_state, done):
         features, _ = self._lstm_step(x, lstm_state, done)
@@ -197,16 +238,81 @@ class Agent(nn.Module):
         return action, dist.log_prob(action), dist.entropy(), self.critic(features), new_lstm_state
 
 
+# ── Eval on test suites ──────────────────────────────────────────────────────
+
+@torch.no_grad()
+def evaluate_suites(agent, suite_names: List[str], num_tasks: int,
+                    device: torch.device, lstm_hidden: int) -> dict:
+    from eval.suites import load_minigrid_test_suite
+
+    agent.eval()
+    all_results = {}
+
+    for suite_name in suite_names:
+        try:
+            env_names, env_fns = load_minigrid_test_suite(suite_name, num_tasks=num_tasks)
+        except Exception as e:
+            print(f"[Eval] Failed to load {suite_name}: {e}")
+            continue
+
+        successes, ep_returns = [], []
+        for env_fn in env_fns:
+            env = env_fn()
+            obs_raw = env.reset()
+            # suite envs return plain obs (not (obs, info) tuple)
+            if isinstance(obs_raw, tuple):
+                obs_raw = obs_raw[0]
+            obs = torch.tensor(flat_obs(obs_raw), dtype=torch.float32, device=device).unsqueeze(0)
+            lstm_state = (
+                torch.zeros(1, 1, lstm_hidden, device=device),
+                torch.zeros(1, 1, lstm_hidden, device=device),
+            )
+            done = torch.zeros(1, device=device)
+            ep_ret = 0.0
+            success = False
+
+            for _ in range(512):
+                action, _, _, _, lstm_state = agent.get_action_and_value(obs, lstm_state, done)
+                step_result = env.step(action.item())
+                if len(step_result) == 4:
+                    obs_raw, reward, d, info = step_result
+                    ep_ret += reward
+                    if d:
+                        success = reward > 0
+                        break
+                else:
+                    obs_raw, reward, term, trunc, info = step_result
+                    ep_ret += reward
+                    if term or trunc:
+                        success = bool(term)
+                        break
+                obs = torch.tensor(flat_obs(obs_raw), dtype=torch.float32, device=device).unsqueeze(0)
+                done = torch.zeros(1, device=device)
+
+            successes.append(float(success))
+            ep_returns.append(ep_ret)
+            env.close()
+
+        sr   = float(np.mean(successes))
+        mean_r = float(np.mean(ep_returns))
+        all_results[suite_name] = {'success_rate': sr, 'mean_return': mean_r}
+        print(f"[Eval] {suite_name:40s}  success={sr:.3f}  return={mean_r:.3f}")
+
+    agent.train()
+    return all_results
+
+
 # ── Training loop ────────────────────────────────────────────────────────────
 
 def train(args: Args):
-    assert args.num_envs % args.num_minibatches == 0, \
-        "num_envs must be divisible by num_minibatches"
+    assert args.num_envs % args.num_minibatches == 0
     envs_per_batch = args.num_envs // args.num_minibatches
 
     args.batch_size     = args.num_envs * args.num_steps
     args.minibatch_size = envs_per_batch * args.num_steps
     args.num_iterations = args.total_timesteps // args.batch_size
+
+    suite_names = [s.strip() for s in args.test_env_names.split(',') if s.strip()]
 
     run_name = f"{args.env_id}__{args.exp_name}__seed{args.seed}__{int(time.time())}"
 
@@ -228,7 +334,8 @@ def train(args: Args):
 
     envs = gym.vector.SyncVectorEnv([
         make_env(args.env_id, args.seed, i, args.capture_video, run_name,
-                 use_shaping=args.reward_shaping, shaping_coef=args.shaping_coef, gamma=args.gamma)
+                 use_shaping=args.reward_shaping, shaping_coef=args.shaping_coef,
+                 gamma=args.gamma)
         for i in range(args.num_envs)
     ])
     obs_dim   = int(np.prod(envs.single_observation_space.shape))
@@ -238,10 +345,8 @@ def train(args: Args):
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     total_params = sum(p.numel() for p in agent.parameters())
-    print(f"Params: {total_params:,}  obs_dim={obs_dim}  actions={n_actions}  "
-          f"lstm_hidden={args.lstm_hidden}")
+    print(f"Params: {total_params:,}  obs_dim={obs_dim}  actions={n_actions}  lstm={args.lstm_hidden}")
 
-    # Rollout buffers — shape (num_steps, num_envs, ...)
     obs_buf  = torch.zeros((args.num_steps, args.num_envs, obs_dim),  device=device)
     actions  = torch.zeros((args.num_steps, args.num_envs),           device=device)
     logprobs = torch.zeros((args.num_steps, args.num_envs),           device=device)
@@ -260,17 +365,27 @@ def train(args: Args):
         torch.zeros(1, args.num_envs, args.lstm_hidden, device=device),
     )
 
-    # Manual episode tracking (more reliable than RecordEpisodeStatistics in vecenv)
-    ep_ret_buf      = np.zeros(args.num_envs, dtype=np.float32)  # shaped return
-    ep_true_ret_buf = np.zeros(args.num_envs, dtype=np.float32)  # unshaped return
+    ep_ret_buf      = np.zeros(args.num_envs, dtype=np.float32)
+    ep_true_ret_buf = np.zeros(args.num_envs, dtype=np.float32)
     ep_len_buf      = np.zeros(args.num_envs, dtype=np.int32)
+
+    # Zero-shot eval before training
+    if args.eval_interval > 0 and suite_names:
+        print("\n[Eval] Zero-shot evaluation...")
+        eval_results = evaluate_suites(agent, suite_names, args.test_num_tasks,
+                                       device, args.lstm_hidden)
+        eval_log = {}
+        for suite, metrics in eval_results.items():
+            short = suite.replace('MultiGrid-', '').replace('-v0', '')
+            eval_log[f"eval/{short}/success_rate"] = metrics['success_rate']
+            eval_log[f"eval/{short}/mean_return"]  = metrics['mean_return']
+        wandb.log(eval_log, step=0)
 
     for iteration in range(1, args.num_iterations + 1):
         if args.anneal_lr:
             frac = 1.0 - (iteration - 1) / args.num_iterations
             optimizer.param_groups[0]["lr"] = frac * args.learning_rate
 
-        # Save LSTM state at start of rollout (needed for BPTT during update)
         initial_lstm = (next_lstm[0].clone(), next_lstm[1].clone())
 
         # ── Collect rollout ──────────────────────────────────────────────────
@@ -315,14 +430,6 @@ def train(args: Args):
                     ep_true_ret_buf[i] = 0.0
                     ep_len_buf[i]      = 0
 
-            if "final_info" in infos:
-                for info in infos["final_info"]:
-                    if info and "episode" in info:
-                        ep_returns.append(info["episode"]["r"])
-                        ep_lengths.append(info["episode"]["l"])
-                        print(f"step={global_step:>8}  ep_return={info['episode']['r']:.3f}"
-                              f"  ep_len={info['episode']['l']}")
-
         # ── GAE ─────────────────────────────────────────────────────────────
         with torch.no_grad():
             next_value = agent.get_value(next_obs, next_lstm, next_done).reshape(1, -1)
@@ -335,47 +442,36 @@ def train(args: Args):
                 advantages[t]   = lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
             returns = advantages + values
 
-        # ── PPO update (env-sequential minibatches for BPTT) ─────────────────
-        # Each minibatch = envs_per_batch envs × num_steps steps (full sequences)
+        # ── PPO update ───────────────────────────────────────────────────────
         clipfracs = []
         for epoch in range(args.update_epochs):
             env_order = torch.randperm(args.num_envs, device=device)
             for start in range(0, args.num_envs, envs_per_batch):
                 mb_env_inds = env_order[start:start + envs_per_batch]
-
-                # Initial LSTM state for this group of envs
                 mb_lstm = (
                     initial_lstm[0][:, mb_env_inds, :],
                     initial_lstm[1][:, mb_env_inds, :],
                 )
-
-                # Run full sequence through LSTM to get updated logprobs / values
                 mb_new_logprobs, mb_entropies, mb_new_values = [], [], []
                 for t in range(args.num_steps):
-                    obs_t    = obs_buf[t, mb_env_inds]
-                    done_t   = dones[t, mb_env_inds]
-                    action_t = actions[t, mb_env_inds].long()
-
                     _, new_logprob, entropy, new_value, mb_lstm = agent.get_action_and_value(
-                        obs_t, mb_lstm, done_t, action_t
+                        obs_buf[t, mb_env_inds], mb_lstm, dones[t, mb_env_inds],
+                        actions[t, mb_env_inds].long()
                     )
                     mb_new_logprobs.append(new_logprob)
                     mb_entropies.append(entropy)
                     mb_new_values.append(new_value.view(-1))
 
-                # Flatten: (num_steps × envs_per_batch,)
                 new_logprob  = torch.stack(mb_new_logprobs).reshape(-1)
                 entropy_loss = torch.stack(mb_entropies).reshape(-1).mean()
                 new_value    = torch.stack(mb_new_values).reshape(-1)
-
-                old_logprob = logprobs[:, mb_env_inds].reshape(-1)
-                mb_adv      = advantages[:, mb_env_inds].reshape(-1)
-                mb_returns  = returns[:, mb_env_inds].reshape(-1)
-                old_value   = values[:, mb_env_inds].reshape(-1)
+                old_logprob  = logprobs[:, mb_env_inds].reshape(-1)
+                mb_adv       = advantages[:, mb_env_inds].reshape(-1)
+                mb_returns   = returns[:, mb_env_inds].reshape(-1)
+                old_value    = values[:, mb_env_inds].reshape(-1)
 
                 logratio = new_logprob - old_logprob
                 ratio    = logratio.exp()
-
                 with torch.no_grad():
                     approx_kl = ((ratio - 1) - logratio).mean()
                     clipfracs.append(((ratio - 1.0).abs() > args.clip_coef).float().mean().item())
@@ -398,7 +494,6 @@ def train(args: Args):
                     vf_loss = (new_value - mb_returns).pow(2).mean() / 2
 
                 loss = pg_loss - args.ent_coef * entropy_loss + vf_loss * args.vf_coef
-
                 optimizer.zero_grad()
                 loss.backward()
                 nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
@@ -410,25 +505,48 @@ def train(args: Args):
         # ── Logging ─────────────────────────────────────────────────────────
         sps = int(global_step / (time.time() - start_time))
         log_dict = {
-            "charts/learning_rate":       optimizer.param_groups[0]["lr"],
-            "charts/SPS":                 sps,
-            "losses/value_loss":          vf_loss.item(),
-            "losses/policy_loss":         pg_loss.item(),
-            "losses/entropy":             entropy_loss.item(),
-            "losses/approx_kl":           approx_kl.item(),
-            "losses/clipfrac":            np.mean(clipfracs),
-            "global_step":                global_step,
+            "charts/learning_rate": optimizer.param_groups[0]["lr"],
+            "charts/SPS":           sps,
+            "losses/value_loss":    vf_loss.item(),
+            "losses/policy_loss":   pg_loss.item(),
+            "losses/entropy":       entropy_loss.item(),
+            "losses/approx_kl":     approx_kl.item(),
+            "losses/clipfrac":      np.mean(clipfracs),
+            "global_step":          global_step,
         }
         if ep_returns:
             log_dict["charts/mean_shaped_return"] = np.mean(ep_returns)
             log_dict["charts/mean_true_return"]   = np.mean(ep_true_returns)
             log_dict["charts/success_rate"]       = np.mean(ep_successes)
             log_dict["charts/mean_ep_length"]     = np.mean(ep_lengths)
+
+        # ── Periodic eval ────────────────────────────────────────────────────
+        if args.eval_interval > 0 and suite_names and iteration % args.eval_interval == 0:
+            print(f"\n[Eval] iter={iteration}  step={global_step}")
+            eval_results = evaluate_suites(agent, suite_names, args.test_num_tasks,
+                                           device, args.lstm_hidden)
+            for suite, metrics in eval_results.items():
+                short = suite.replace('MultiGrid-', '').replace('-v0', '')
+                log_dict[f"eval/{short}/success_rate"] = metrics['success_rate']
+                log_dict[f"eval/{short}/mean_return"]  = metrics['mean_return']
+
         wandb.log(log_dict, step=global_step)
 
         if iteration % 10 == 0:
             print(f"iter={iteration}/{args.num_iterations}  steps={global_step}  SPS={sps}  "
                   f"vf={vf_loss.item():.4f}  pg={pg_loss.item():.4f}  ent={entropy_loss.item():.4f}")
+
+    # Final eval
+    if args.eval_interval > 0 and suite_names:
+        print("\n[Eval] Final evaluation...")
+        eval_results = evaluate_suites(agent, suite_names, args.test_num_tasks,
+                                       device, args.lstm_hidden)
+        final_log = {"global_step": global_step}
+        for suite, metrics in eval_results.items():
+            short = suite.replace('MultiGrid-', '').replace('-v0', '')
+            final_log[f"eval/{short}/success_rate"] = metrics['success_rate']
+            final_log[f"eval/{short}/mean_return"]  = metrics['mean_return']
+        wandb.log(final_log, step=global_step)
 
     os.makedirs("models", exist_ok=True)
     model_path = f"models/{run_name}.pt"
@@ -443,7 +561,7 @@ def train(args: Args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env-id",          type=str,   default="MiniGrid-SimpleCrossingS9N1-v0")
+    parser.add_argument("--env-id",          type=str,   default="MiniGrid-SimpleCrossingS11N5-v0")
     parser.add_argument("--seed",            type=int,   default=1)
     parser.add_argument("--total-timesteps", type=int,   default=2_000_000)
     parser.add_argument("--num-envs",        type=int,   default=8)
@@ -454,6 +572,11 @@ if __name__ == "__main__":
     parser.add_argument("--lstm-hidden",     type=int,   default=128)
     parser.add_argument("--reward-shaping",  action="store_true")
     parser.add_argument("--shaping-coef",    type=float, default=0.5)
+    parser.add_argument("--eval-interval",   type=int,   default=100)
+    parser.add_argument("--test-num-tasks",  type=int,   default=10)
+    parser.add_argument("--test-env-names",  type=str,
+                        default='MultiGrid-VLMSampled-v0,MultiGrid-RandomGenerated-v0,'
+                                'MultiGrid-FourRooms-v0,MultiGrid-SimpleCrossing-v0')
     parser.add_argument("--no-cuda",         action="store_true")
     parser.add_argument("--capture-video",   action="store_true")
     parser.add_argument("--exp_name",        type=str,   default="ppo_crossing_baseline")
@@ -472,6 +595,9 @@ if __name__ == "__main__":
         lstm_hidden=cli.lstm_hidden,
         reward_shaping=cli.reward_shaping,
         shaping_coef=cli.shaping_coef,
+        eval_interval=cli.eval_interval,
+        test_num_tasks=cli.test_num_tasks,
+        test_env_names=cli.test_env_names,
         cuda=not cli.no_cuda,
         capture_video=cli.capture_video,
         exp_name=cli.exp_name,
