@@ -51,7 +51,7 @@ PARAMS = {
     'learnability_staleness':               0.1,
 
     # Evaluation
-    'test_env_names':                       '',
+    'test_env_names':                       'MultiGrid-VLMSampled-v0,MultiGrid-RandomGenerated-v0,MultiGrid-FourRooms-v0,MultiGrid-SimpleCrossing-v0,MultiGrid-Maze-v0',
     'test_interval':                        20,
     'test_num_episodes':                    10,
     'test_num_processes':                   1,
@@ -71,10 +71,19 @@ PROCEDURAL_OVERRIDES = {
     'top_k_to_sample_uniformly':    100,
 }
 
+_GYM_SFL_COMMON = {
+    # Procedural pool is infinite — use a larger rolling learnability buffer
+    # and weight staleness higher.
+    'update_learnability_every_iterations': 10,
+    'learnability_buffer_size':             3000,
+    'learnability_staleness':               0.3,
+    'top_k_to_sample_uniformly':            200,
+}
+
 GYM_OVERRIDES = {
-    'gymMaze':      {'env_name': 'MiniGrid-MultiRoom-N6-v0'},
-    'gymCrossing':  {'env_name': 'MiniGrid-SimpleCrossingS11N5-v0'},
-    'gymFourRooms': {'env_name': 'MiniGrid-FourRooms-v0'},
+    'gymMaze':      {'env_name': 'MiniGrid-MultiRoom-N6-v0',        **_GYM_SFL_COMMON},
+    'gymCrossing':  {'env_name': 'MiniGrid-SimpleCrossingS11N5-v0', **_GYM_SFL_COMMON},
+    'gymFourRooms': {'env_name': 'MiniGrid-FourRooms-v0',           **_GYM_SFL_COMMON},
 }
 
 TEST_OVERRIDES = {
@@ -87,6 +96,7 @@ TEST_OVERRIDES = {
     'update_learnability_every_iterations': 2,
     'test_interval':                        2,
     'test_num_episodes':                    1,
+    'test_suite_num_tasks':                 3,
     'vlm_env_max_tasks':                    20,
     'screenshot_interval':                  0,
 }

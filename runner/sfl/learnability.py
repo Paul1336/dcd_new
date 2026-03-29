@@ -88,7 +88,6 @@ class LearnabilitySampler(object):
         if key not in self.task_info_dict:
             raise ValueError(f"Env not found in learnability sampler (key={key!r})")
 
-        print('update learnability for env_id: ', env_id, 'with success_rate: ', success_rate)
         self.task_info_dict[key] = {
             'zero_shot_success_rate': success_rate,
             'last_updated_global_step_for_learnability': global_step

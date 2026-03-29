@@ -34,7 +34,7 @@ MINIGRID_SUITE_NAMES = frozenset({
     'MultiGrid-Maze-v0',
 })
 
-_SUITE_NUM_TASKS = 100
+_SUITE_NUM_TASKS = 20
 _BASE_SEED = 0
 
 _OFFICIAL_ENV_IDS = {

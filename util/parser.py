@@ -236,6 +236,11 @@ class Parser:
             default=0.1,
             help='Learnability staleness parameter.')
         self.parser.add_argument(
+            '--learnability_num_episodes',
+            type=int,
+            default=5,
+            help='Episodes per level when evaluating learnability. Fewer = faster but noisier.')
+        self.parser.add_argument(
             '--top_k_to_sample_uniformly',
             type=int,
             default=-1,
@@ -534,6 +539,11 @@ class Parser:
             type=str,
             default='MultiGrid-SixteenRooms-v0,MultiGrid-Labyrinth-v0,MultiGrid-Maze-v0',
             help='CSV string of test environments for evaluation during training.')
+        self.parser.add_argument(
+            '--test_suite_num_tasks',
+            type=int,
+            default=20,
+            help='Number of levels to load per test suite. Reduce for faster smoke tests.')
 
         # Environment arguments.
         self.parser.add_argument(

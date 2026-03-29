@@ -130,12 +130,23 @@ class SFLRunner(Runner):
         if len(env_names) == 0:
             return
 
-        k = min(args.learnability_buffer_size, len(env_names))
+        # Only re-evaluate a fraction of the buffer per call so the learnability
+        # update cost is spread across multiple iterations.  Target: cycle through
+        # learnability_buffer_size tasks in `update_learnability_every_iterations` updates.
+        # Use learnability_buffer_size (not the full pool) as the base so VLM mode
+        # (which stores thousands of env_names) doesn't evaluate far more than intended.
+        fraction = max(1, args.update_learnability_every_iterations)
+        effective_pool = min(args.learnability_buffer_size, len(env_names))
+        k = max(args.num_processes, effective_pool // fraction)
+        k = min(k, len(env_names))
         sampled_env_ids = random.sample(env_names, k)
 
         if self._is_multigrid:
             # Multigrid: evaluate agent on grid encodings using the training venv
-            results = self._eval_multigrid_levels(sampled_env_ids, num_episodes=10)
+            results = self._eval_multigrid_levels(
+                sampled_env_ids,
+                num_episodes=getattr(args, 'learnability_num_episodes', 5),
+            )
             for enc in sampled_env_ids:
                 key = enc.tobytes()
                 self.learnability_sampler.update_learnability(
@@ -356,10 +367,6 @@ class SFLRunner(Runner):
                     self.env_sampling_total_count[env_name] += 1
                     self.env_sampling_current_count[env_name] += 1
                     self.total_episodes_collected += 1
-
-                    print(
-                        f" env_index={i:02d}, episodic_return={info['episode']['r']}, env={env_name}, current_count={self.env_sampling_current_count[env_name]}, total_count={self.env_sampling_total_count[env_name]}"
-                    )
 
                     if self.agent.storage.use_proper_time_limits:
                         if 'truncated_obs' in info:

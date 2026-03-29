@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Any, Callable, Dict, List, Optional
 
@@ -21,6 +22,9 @@ def create_evaluator(args, obs_encoder: Optional[Callable] = None):
         record_video=getattr(args, "record_video", False),
         env_config=env_config,
         obs_encoder=obs_encoder,
+        method=getattr(args, 'method', ''),
+        log_dir=getattr(args, 'log_dir', '.'),
+        suite_num_tasks=getattr(args, 'test_suite_num_tasks', 20),
     )
 
 
@@ -50,6 +54,9 @@ class Evaluator:
         record_video: bool = False,
         env_config: Optional[Dict] = None,
         obs_encoder: Optional[Callable] = None,
+        method: str = '',
+        log_dir: str = '.',
+        suite_num_tasks: int = 20,
         **kwargs,
     ):
         self.test_suite_names = test_suite_names
@@ -59,6 +66,10 @@ class Evaluator:
         self.record_video = record_video
         self.env_config = env_config or {}
         self.obs_encoder = obs_encoder
+        self.method = method
+        self.log_dir = log_dir
+        self.suite_num_tasks = suite_num_tasks
+        self._eval_count = 0
         self.kwargs = kwargs
 
         first = test_suite_names[0] if test_suite_names else ""
@@ -72,6 +83,17 @@ class Evaluator:
 
         self._opened_envs = []
 
+        # Pre-load and cache all minigrid suites so every eval uses the same
+        # fixed set of tasks (suites are deterministic via base_seed=0).
+        self._minigrid_suite_cache: Dict[str, tuple] = {}
+        for name in test_suite_names:
+            if name in MINIGRID_SUITE_NAMES:
+                self._minigrid_suite_cache[name] = load_minigrid_test_suite(
+                    name, num_tasks=self.suite_num_tasks
+                )
+                print(f"[Evaluator] Loaded suite {name}: "
+                      f"{len(self._minigrid_suite_cache[name][0])} levels")
+
     def close(self):
         for e in self._opened_envs:
             try:
@@ -82,13 +104,21 @@ class Evaluator:
 
     def get_stats_keys(self) -> List[str]:
         """Keys emitted by evaluate(); used by train.py when eval is skipped."""
-        return [f"{suite}/mean_success_rate" for suite in self.test_suite_names]
+        keys = []
+        for suite in self.test_suite_names:
+            if suite in self._minigrid_suite_cache:
+                env_names, _ = self._minigrid_suite_cache[suite]
+                for env_id in env_names:
+                    keys.append(f"{suite}/{env_id}/success_rate")
+            keys.append(f"{suite}/mean_success_rate")
+        return keys
 
     # ---------- public ----------
 
     def evaluate(self, agent) -> EvaluationStats:
         agent.eval()
         agent.to(self.device)
+        self._eval_count += 1
 
         stats: Dict[str, float] = {}
 
@@ -97,8 +127,13 @@ class Evaluator:
             start_time = time.time()
 
             if test_suite_name in MINIGRID_SUITE_NAMES:
-                env_names, env_fns = load_minigrid_test_suite(test_suite_name)
+                env_names, env_fns = self._minigrid_suite_cache[test_suite_name]
                 suite_results = self._evaluate_parallel_fns(env_names, env_fns, agent)
+                # Record one trajectory per suite for visual inspection
+                try:
+                    self._record_trajectory(env_fns[0], agent, test_suite_name, env_names[0])
+                except Exception as e:
+                    print(f"[Trajectory] Warning: failed for {test_suite_name}: {e}")
             else:
                 env_names, env_task_configs = load_iphyre_test_suite(test_suite_name)
                 suite_results = self._evaluate_parallel(env_names, env_task_configs, agent)
@@ -135,6 +170,12 @@ class Evaluator:
             results.update(self._evaluate_chunk_fns(chunk_names, chunk_fns, agent))
         return results
 
+    @staticmethod
+    def _preprocess_minigrid_obs(obs: np.ndarray) -> Dict[str, torch.Tensor]:
+        """(N,H,W,C) uint8 → {'image': tensor(N,C,H,W) float32 0-1}."""
+        t = torch.from_numpy(obs).float() / 255.0   # (N,H,W,C)
+        return {'image': t.permute(0, 3, 1, 2)}     # (N,C,H,W)
+
     @torch.no_grad()
     def _evaluate_chunk_fns(
         self,
@@ -149,7 +190,7 @@ class Evaluator:
         episodic_returns: Dict[str, List[float]] = {name: [] for name in env_names}
         episodic_return = torch.zeros(n)
 
-        obs = self._encode_obs(envs.reset())
+        obs = self._preprocess_minigrid_obs(envs.reset())
 
         hidden_size = agent.recurrent_hidden_state_size
         rnn_hxs = torch.zeros(n, hidden_size, device=self.device)
@@ -162,7 +203,7 @@ class Evaluator:
 
             action_np = action.cpu().numpy()
             obs, reward, done, _ = envs.step(action_np)
-            obs = self._encode_obs(obs)
+            obs = self._preprocess_minigrid_obs(obs)
 
             episodic_return += torch.tensor(reward, dtype=torch.float32)
             masks = torch.tensor(
@@ -195,6 +236,92 @@ class Evaluator:
         if self.obs_encoder is not None:
             obs = self.obs_encoder(obs)
         return torch.from_numpy(obs).to(dtype=torch.float32, device=self.device)
+
+    @torch.no_grad()
+    def _record_trajectory(self, env_fn: Callable, agent, suite_name: str, level_name: str):
+        """Run one deterministic episode, save GIF to disk and log to wandb.
+
+        File: {log_dir}/trajectories/{method}_eval{n:04d}_{suite}_{level}.gif
+        Wandb key: trajectory/{suite_name}/{level_name}
+        """
+        try:
+            import PIL.Image as PILImage
+        except ImportError:
+            return  # skip silently if Pillow not installed
+
+        env = env_fn()
+        raw_obs = env.reset()
+        frames: List[np.ndarray] = []
+
+        hidden_size = agent.recurrent_hidden_state_size
+        rnn_hxs = torch.zeros(1, hidden_size, device=self.device)
+        if agent.is_lstm:
+            rnn_hxs = (rnn_hxs, torch.zeros_like(rnn_hxs))
+        masks = torch.ones(1, 1, device=self.device)
+
+        def _to_frame(raw) -> np.ndarray:
+            """Extract (H, W, C) uint8 image from raw env obs."""
+            img = raw['image'] if isinstance(raw, dict) else raw
+            if isinstance(img, torch.Tensor):
+                img = img.cpu().numpy()
+            return img.astype(np.uint8)
+
+        def _to_agent_obs(raw) -> Dict:
+            """(H,W,C) uint8 → {'image': tensor(1,C,H,W) float32 0-1}."""
+            img = raw['image'] if isinstance(raw, dict) else raw
+            if isinstance(img, torch.Tensor):
+                img = img.cpu().numpy()
+            t = torch.from_numpy(img).float() / 255.0
+            return {'image': t.unsqueeze(0).permute(0, 3, 1, 2).to(self.device)}
+
+        frames.append(_to_frame(raw_obs))
+        obs = _to_agent_obs(raw_obs)
+
+        for _ in range(300):
+            _, action, _, rnn_hxs = agent.act(obs, rnn_hxs, masks, deterministic=True)
+            raw_obs, _, done, _ = env.step(int(action.cpu().item()))
+            frames.append(_to_frame(raw_obs))
+            obs = _to_agent_obs(raw_obs)
+            masks = torch.zeros(1, 1, device=self.device) if done else masks
+            if done:
+                break
+        env.close()
+
+        # upscale each frame (MinGrid obs is 7×7, hard to see)
+        scale = 16
+        pil_frames = [
+            PILImage.fromarray(f).resize(
+                (f.shape[1] * scale, f.shape[0] * scale), PILImage.NEAREST
+            )
+            for f in frames
+        ]
+
+        # safe filename
+        safe_suite = suite_name.replace('/', '-')
+        safe_level = level_name.replace('/', '-')
+        tag = f"{self.method}_eval{self._eval_count:04d}_{safe_suite}_{safe_level}"
+        traj_dir = os.path.join(self.log_dir, 'trajectories')
+        os.makedirs(traj_dir, exist_ok=True)
+        gif_path = os.path.join(traj_dir, f"{tag}.gif")
+        pil_frames[0].save(
+            gif_path, save_all=True, append_images=pil_frames[1:],
+            duration=150, loop=0,
+        )
+        print(f"[Trajectory] {tag} — {len(frames)} steps → {gif_path}")
+
+        # log to wandb if active
+        try:
+            import wandb
+            if wandb.run is not None:
+                frames_np = np.stack([np.array(f) for f in pil_frames])  # (T,H,W,C)
+                wandb.log(
+                    {f"trajectory/{suite_name}/{level_name}": wandb.Video(
+                        frames_np.transpose(0, 3, 1, 2), fps=6, format="gif"
+                    )},
+                    step=self._eval_count,
+                )
+        except Exception:
+            pass
 
     @torch.no_grad()
     def _evaluate_parallel(
