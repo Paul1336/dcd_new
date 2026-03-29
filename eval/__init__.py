@@ -259,12 +259,29 @@ class Evaluator:
             rnn_hxs = (rnn_hxs, torch.zeros_like(rnn_hxs))
         masks = torch.ones(1, 1, device=self.device)
 
+        # MiniGrid symbolic obs: channel-0 = object_idx (0-10), NOT RGB.
+        # Map object indices to distinct RGB colours so the GIF is viewable.
+        _OBJ_RGB = np.array([
+            [ 32,  32,  32],  # 0  unseen      — dark grey
+            [230, 230, 230],  # 1  empty        — light grey
+            [ 80,  80,  80],  # 2  wall         — medium grey
+            [200, 200, 200],  # 3  floor        — light grey
+            [160, 100,  40],  # 4  door         — brown
+            [255, 255,   0],  # 5  key          — yellow
+            [  0, 200, 200],  # 6  ball         — cyan
+            [200,  70,   0],  # 7  box          — orange
+            [  0, 200,   0],  # 8  goal         — green
+            [255, 100,   0],  # 9  lava         — red-orange
+            [255,   0,   0],  # 10 agent        — red
+        ], dtype=np.uint8)
+
         def _to_frame(raw) -> np.ndarray:
-            """Extract (H, W, C) uint8 image from raw env obs."""
+            """Symbolic (H,W,3) obs → viewable RGB (H,W,3) uint8."""
             img = raw['image'] if isinstance(raw, dict) else raw
             if isinstance(img, torch.Tensor):
                 img = img.cpu().numpy()
-            return img.astype(np.uint8)
+            obj_idx = img[:, :, 0].clip(0, len(_OBJ_RGB) - 1)
+            return _OBJ_RGB[obj_idx]  # (H,W,3) proper RGB
 
         def _to_agent_obs(raw) -> Dict:
             """(H,W,C) uint8 → {'image': tensor(1,C,H,W) float32 0-1}."""
