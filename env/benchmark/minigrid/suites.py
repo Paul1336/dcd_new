@@ -62,7 +62,16 @@ class _FixedLevelEnv:
         self.spec = None
 
     def reset(self, **kwargs):
-        return self._env.reset_to_level(self._encoding)  # full dict
+        obs = self._env.reset_to_level(self._encoding)
+        # gym.make wraps envs in TimeLimit, which requires _elapsed_steps != None
+        # before step() can be called.  reset_to_level() bypasses TimeLimit.reset(),
+        # so we initialise the counter here.
+        env = self._env
+        while env is not None:
+            if hasattr(env, '_elapsed_steps'):
+                env._elapsed_steps = 0
+            env = getattr(env, 'env', None)
+        return obs
 
     def step(self, action):
         return self._env.step(action)  # full dict obs
