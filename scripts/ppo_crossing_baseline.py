@@ -586,26 +586,75 @@ if __name__ == "__main__":
     parser.add_argument("--capture-video",   action="store_true")
     parser.add_argument("--exp_name",        type=str,   default="ppo_crossing_baseline")
     parser.add_argument("--wandb_group",     type=str,   default=None)
+    parser.add_argument("--num-trials",      type=int,   default=1,
+                        help="Number of parallel trials with consecutive seeds.")
+    parser.add_argument("--base-seed",       type=int,   default=None,
+                        help="Override base seed for multi-trial runs (default: --seed value).")
     cli = parser.parse_args()
 
-    args = Args(
-        env_id=cli.env_id,
-        seed=cli.seed,
-        total_timesteps=cli.total_timesteps,
-        num_envs=cli.num_envs,
-        num_steps=cli.num_steps,
-        learning_rate=cli.learning_rate,
-        ent_coef=cli.ent_coef,
-        mlp_hidden=cli.mlp_hidden,
-        lstm_hidden=cli.lstm_hidden,
-        reward_shaping=cli.reward_shaping,
-        shaping_coef=cli.shaping_coef,
-        eval_interval=cli.eval_interval,
-        test_num_tasks=cli.test_num_tasks,
-        test_env_names=cli.test_env_names,
-        cuda=not cli.no_cuda,
-        capture_video=cli.capture_video,
-        exp_name=cli.exp_name,
-        wandb_group=cli.wandb_group,
-    )
-    train(args)
+    num_trials = cli.num_trials
+    base_seed  = cli.base_seed if cli.base_seed is not None else cli.seed
+
+    if num_trials == 1:
+        args = Args(
+            env_id=cli.env_id,
+            seed=base_seed,
+            total_timesteps=cli.total_timesteps,
+            num_envs=cli.num_envs,
+            num_steps=cli.num_steps,
+            learning_rate=cli.learning_rate,
+            ent_coef=cli.ent_coef,
+            mlp_hidden=cli.mlp_hidden,
+            lstm_hidden=cli.lstm_hidden,
+            reward_shaping=cli.reward_shaping,
+            shaping_coef=cli.shaping_coef,
+            eval_interval=cli.eval_interval,
+            test_num_tasks=cli.test_num_tasks,
+            test_env_names=cli.test_env_names,
+            cuda=not cli.no_cuda,
+            capture_video=cli.capture_video,
+            exp_name=cli.exp_name,
+            wandb_group=cli.wandb_group,
+        )
+        train(args)
+    else:
+        # Build one subprocess command per trial, forwarding all flags except
+        # --num-trials / --base-seed, and injecting --seed per trial.
+        import subprocess
+        base_cmd = [sys.executable, __file__]
+        skip = {'--num-trials', '--base-seed', '--seed'}
+        argv = sys.argv[1:]
+        filtered = []
+        i = 0
+        while i < len(argv):
+            tok = argv[i]
+            key = tok.split('=')[0]
+            if key in skip:
+                # skip value token too if flag and value are separate
+                if '=' not in tok and i + 1 < len(argv) and not argv[i + 1].startswith('--'):
+                    i += 2
+                else:
+                    i += 1
+            else:
+                filtered.append(tok)
+                i += 1
+
+        procs = []
+        for trial in range(num_trials):
+            seed = base_seed + trial
+            cmd  = base_cmd + filtered + [f'--seed={seed}']
+            print(f'[Trial {trial}] seed={seed}  ' + ' '.join(cmd))
+            procs.append(subprocess.Popen(cmd, text=True))
+
+        try:
+            for trial, p in enumerate(procs):
+                ret = p.wait()
+                if ret != 0:
+                    print(f'[Trial {trial}] failed with exit code {ret}')
+                else:
+                    print(f'[Trial {trial}] completed successfully')
+        except KeyboardInterrupt:
+            print('\nStopping all trials...')
+            for p in procs:
+                p.terminate()
+            sys.exit(1)
