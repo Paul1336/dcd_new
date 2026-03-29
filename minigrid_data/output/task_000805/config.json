@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 32,
+  "interior_walls": 71,
+  "description": "A challenging maze with dense walls requiring navigating through narrow corridors from the agent in one corner to the goal in the opposite corner.",
+  "ascii": [
+    "###############",
+    "#...#.......#.#",
+    "#.#.#.#####.#.#",
+    "#.#.#.......#.#",
+    "#.#.#####.#.#.#",
+    "#...#...#.#.#.#",
+    "#######.#.#.#.#",
+    "#.........#.#.#",
+    "#.#######.#.#.#",
+    "#.#.......#...#",
+    "#.#.#####.#####",
+    "#.#.#.......#.#",
+    "#.#.#.#######.#",
+    "#A#.#........G#",
+    "###############"
+  ]
+}

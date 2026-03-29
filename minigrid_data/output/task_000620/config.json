@@ -1,0 +1,25 @@
+{
+  "size": 15,
+  "difficulty": "easy",
+  "path_length": 16,
+  "interior_walls": 71,
+  "description": "A simple maze with a direct path from the agent to the goal, surrounded by a few walls.",
+  "ascii": [
+    "###############",
+    "# A...    ... #",
+    "# #############",
+    "# #           #",
+    "# # ######### #",
+    "# #           #",
+    "# ######### # #",
+    "#           # #",
+    "# ######### # #",
+    "#           # #",
+    "# ######### # #",
+    "#           # #",
+    "#    G       #",
+    "###############",
+    "###############",
+    "###############"
+  ]
+}

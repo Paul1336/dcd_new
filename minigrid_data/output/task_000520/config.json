@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 16,
+  "interior_walls": 76,
+  "description": "This maze features a complex path with walls forming tight corridors, creating a strategic challenge for the agent to reach the goal.",
+  "ascii": [
+    "###############",
+    "#.............#",
+    "#.#####.#####.#",
+    "#.....#...#...#",
+    "#.###.#.#.#.#.#",
+    "#.###.#.#.#.#.#",
+    "#...#...#.#.#.#",
+    "###.#####.###.#",
+    "#.......#.....#",
+    "#.#####.#####.#",
+    "#.G...#.....A.#",
+    "#.###########.#",
+    "#.............#",
+    "###############",
+    "###############"
+  ]
+}

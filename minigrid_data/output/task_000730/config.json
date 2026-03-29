@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 38,
+  "interior_walls": 68,
+  "description": "A medium difficulty maze where the agent must navigate through corridors and around walls to reach the goal.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.###.#.#####.#",
+    "#...#...#.....#",
+    "#.#.#####.###.#",
+    "#.#...#...#...#",
+    "#.###.###.#.###",
+    "#...#.....#...#",
+    "#.###.#####.#.#",
+    "#.#...#.....#.#",
+    "#.###.#.#####.#",
+    "#.....#...#...#",
+    "#.#####.###.#.#",
+    "#.G...#.....A.#",
+    "###############"
+  ]
+}

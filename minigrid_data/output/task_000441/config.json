@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 5,
+  "interior_walls": 73,
+  "description": "A challenging maze with a single winding path from the agent in the bottom left corner to the goal in the top left corner.",
+  "ascii": [
+    "###############",
+    "#...#.......#.#",
+    "#.#.#.#####.#.#",
+    "#.#.#.....#.#.#",
+    "#.#.#####.#.#.#",
+    "#.#.#.....#.#.#",
+    "#.#.#.#####.#.#",
+    "#...#.......#.#",
+    "###.###.#####.#",
+    "#G#.#.#.....#.#",
+    "#.#.#.#####.###",
+    "#.#.#.........#",
+    "#.#.###########",
+    "#.A.........#.#",
+    "###############"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 2,
+  "interior_walls": 67,
+  "description": "This maze presents a moderate challenge with a winding path from the start ('A') to the goal ('G'), involving both open spaces and walls.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.#.#.#.#####.#",
+    "#.#.#.#.......#",
+    "#.#.###.#####.#",
+    "#..#.......#..#",
+    "###.###.#.###.#",
+    "#.....#.#.....#",
+    "#.#####.#####.#",
+    "#.........#...#",
+    "#####.###.#.###",
+    "#G..#.....#...#",
+    "#.###.#####.#.#",
+    "#A...........#",
+    "###############"
+  ]
+}

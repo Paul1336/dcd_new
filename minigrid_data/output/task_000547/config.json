@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 11,
+  "interior_walls": 68,
+  "description": "A medium complexity maze with an agent starting at A and a goal at G, featuring walls that create a winding path.",
+  "ascii": [
+    "###############",
+    "#.........#...#",
+    "#.#####.###.#.#",
+    "#...#...#...#.#",
+    "#.###.###.###.#",
+    "#.......#.....#",
+    "#.###.###.###.#",
+    "#.#...#...#...#",
+    "#.#.###.#####.#",
+    "#.#.#...#.....#",
+    "#.#.###.##.###.#",
+    "#......#......#",
+    "###.#####.#####",
+    "#A..........G.#",
+    "###############"
+  ]
+}

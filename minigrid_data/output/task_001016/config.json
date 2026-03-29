@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "easy",
+  "path_length": 12,
+  "interior_walls": 50,
+  "description": "A straightforward maze with a few walls, a start point A near the top left and a goal G near the middle, allowing an easy path.",
+  "ascii": [
+    "###############",
+    "#..A.........#",
+    "#..#..#......#",
+    "#..#..#..#...#",
+    "#......#....G#",
+    "#..#..#......#",
+    "#..#....#....#",
+    "#..##...#....#",
+    "#..........###",
+    "######..#....#",
+    "#......#....#",
+    "#..#########.#",
+    "#............#",
+    "#..##..##...#",
+    "###############"
+  ]
+}

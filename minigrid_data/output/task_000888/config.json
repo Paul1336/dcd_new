@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 28,
+  "interior_walls": 69,
+  "description": "This maze features a challenging route from the agent's start to the goal, featuring several walls and corridors.",
+  "ascii": [
+    "###############",
+    "#..#........G#",
+    "#.#####.#####.#",
+    "#...#.....#...#",
+    "#.#.#####.#.#.#",
+    "#.#.......#.#.#",
+    "#.#####.#####.#",
+    "#...#.........#",
+    "#.#.#########.#",
+    "#.#...........#",
+    "#.#####.###.#.#",
+    "#...#...#...#.#",
+    "###.#.#.#.###.#",
+    "#...#.#.....A.#",
+    "###############"
+  ]
+}

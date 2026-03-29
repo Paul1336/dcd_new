@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 2,
+  "interior_walls": 70,
+  "description": "This medium difficulty maze features a single path with walls creating a challenging route from the start to the goal.",
+  "ascii": [
+    "###############",
+    "#...#.........#",
+    "#.#.#.#####.#.#",
+    "#.#...#...#.#.#",
+    "#.###.#.#.#.#.#",
+    "#.....#.###.#.#",
+    "#.#####.###.#.#",
+    "#.#...#.....#.#",
+    "#.#.#####.###.#",
+    "#...#...#...#.#",
+    "###.#.###.###.#",
+    "#G..#.......#.#",
+    "#.#.#########.#",
+    "#A............#",
+    "###############"
+  ]
+}

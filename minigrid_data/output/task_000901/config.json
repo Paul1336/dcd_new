@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 1,
+  "interior_walls": 68,
+  "description": "A maze with a clear path from the agent start to the goal, surrounded by walls forming a medium difficulty detour.",
+  "ascii": [
+    "###############",
+    "#.....#.....#.#",
+    "#.#.#.#.#.#.#.#",
+    "#.#.#.#.#.#.#.#",
+    "#.#.#...#...#.#",
+    "#.#.###.###.#.#",
+    "#.#.#.....#.#.#",
+    "#.#.#####.#.#.#",
+    "#...#.....#...#",
+    "#####.#####.###",
+    "#.....#...#.#.#",
+    "#.#.#.#.#.#.#.#",
+    "#G#.#.#.#.#.#.#",
+    "#A.....#.....#.#",
+    "###############"
+  ]
+}

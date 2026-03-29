@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 13,
+  "interior_walls": 70,
+  "description": "A medium difficulty maze with a single path connecting the agent's start to the goal through a labyrinth of walls.",
+  "ascii": [
+    "###############",
+    "#...#.........#",
+    "#.#.#.#####.#.#",
+    "#.#.#.....#.#.#",
+    "#.#.#####.#.#.#",
+    "#.......#.#...#",
+    "#####.#.#.#####",
+    "#.....#.....#.#",
+    "#.###.#####.#.#",
+    "#.#...#...#A.#",
+    "#.#.#######.#.#",
+    "#.#.........#.#",
+    "#.#####.#####.#",
+    "#...........G#",
+    "###############"
+  ]
+}

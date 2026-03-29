@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "easy",
+  "path_length": 4,
+  "interior_walls": 38,
+  "description": "A simple maze with mostly open space and a clear path from the agent's start to the goal.",
+  "ascii": [
+    "###############",
+    "# . . . . . . #",
+    "# . #### . . #",
+    "# . . . . . #",
+    "# . ### . . #",
+    "# . . . . . #",
+    "# . #### . #",
+    "# . . . A . #",
+    "# . . . . . #",
+    "# . ### . G #",
+    "# . . . . . #",
+    "# . . . . . #",
+    "# . . . . . #",
+    "# . . . . . #",
+    "###############"
+  ]
+}

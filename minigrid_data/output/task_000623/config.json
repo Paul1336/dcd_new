@@ -1,0 +1,25 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 15,
+  "interior_walls": 82,
+  "description": "This maze features a complex path that requires navigating through narrow corridors to reach the goal from the starting position.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.###.#.#####.#",
+    "#...#...#...G.#",
+    "#.###.###.###.#",
+    "#...#.....#...#",
+    "###.#####.###.#",
+    "#.....#.....#.#",
+    "#.#####.###.#.#",
+    "#...#.....#...#",
+    "#.###.#####.###",
+    "#......A......#",
+    "###############",
+    "###############",
+    "###############",
+    "###############"
+  ]
+}

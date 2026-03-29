@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 11,
+  "interior_walls": 66,
+  "description": "This maze features an agent starting point 'A' in the lower row, navigating through structured walls and a unique goal 'G'.",
+  "ascii": [
+    "###############",
+    "#...#.........#",
+    "#.#.#.#.#####.#",
+    "#.#...#.....#.#",
+    "#.#####.###.#.#",
+    "#........#...#.",
+    "###.#####.###.#",
+    "#...#...#...#.#",
+    "#.#.#.#####.#.#",
+    "#.#...#.....#.#",
+    "#.#.#.###.#.#.#",
+    "#...#.....#...#",
+    "#.#####.#####.#",
+    "#A..........G.#",
+    "###############"
+  ]
+}

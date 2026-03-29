@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "easy",
+  "path_length": 19,
+  "interior_walls": 22,
+  "description": "This maze features an agent starting near the bottom left and a goal at the center-right, with a few walls creating some challenge in an otherwise open grid.",
+  "ascii": [
+    "###############",
+    "#.............#",
+    "#..#####......#",
+    "#.............#",
+    "#..###........#",
+    "#.............#",
+    "#..####......G#",
+    "#..............#",
+    "#...###########.#",
+    "#........A.....#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "###############"
+  ]
+}

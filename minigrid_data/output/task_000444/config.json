@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "easy",
+  "path_length": 6,
+  "interior_walls": 34,
+  "description": "This is an easy maze with few walls and a clear path from the agent start 'A' to the goal 'G'.",
+  "ascii": [
+    "###############",
+    "# A.....G.... #",
+    "# # # # # # # #",
+    "# . . . . . . #",
+    "# . # # # # . #",
+    "# . . . . . . #",
+    "# # # # # # # #",
+    "# . . . . . . #",
+    "# # # # # # # #",
+    "# . . . . . . #",
+    "# # # # # # # #",
+    "# . . . . . . #",
+    "# # # # # # # #",
+    "# . . . . . . #",
+    "###############"
+  ]
+}

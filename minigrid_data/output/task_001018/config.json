@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "easy",
+  "path_length": 7,
+  "interior_walls": 67,
+  "description": "This maze has a single path from the agent start to the goal with few walls and is designed for easy navigation.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.###.#.#####.#",
+    "#...#.....#...#",
+    "#.#####.#.#.#.#",
+    "#.......#.#...#",
+    "#.#####.#.###.#",
+    "#...#...#.....#",
+    "#.#.###.#####.#",
+    "#...#....G...#",
+    "#.###.#######.#",
+    "#.....A.......#",
+    "#.#############",
+    "#............#",
+    "###############"
+  ]
+}

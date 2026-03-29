@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 30,
+  "interior_walls": 66,
+  "description": "A complex maze with a start in one corner and a goal in the opposite corner, featuring dense walls and a lengthy path.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.#.#.#.#####.#",
+    "#.#.#...#...G.#",
+    "#.#.#.#.#.#.#.#",
+    "#...#.#.#.#.#.#",
+    "#.#.#.#.#.#.#.#",
+    "#.#.#...#.#.#.#",
+    "#.#.#.#.###.#.#",
+    "#...#...#...#.#",
+    "###.#.#####.#.#",
+    "#...#...#...#.#",
+    "#.#.#####.###.#",
+    "#.A.....#.....#",
+    "###############"
+  ]
+}

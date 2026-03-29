@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 5,
+  "interior_walls": 63,
+  "description": "A challenging maze with a complex path from the agent's start position in the bottom left to the goal in the upper middle of the grid.",
+  "ascii": [
+    "###############",
+    "#...#.....#...#",
+    "#.#.#.#.###.#.#",
+    "#.#...#...#.#.#",
+    "#.#.###.#.#.#.#",
+    "#.....#.#.#...#",
+    "###.#.#.#.#.#.#",
+    "#...#.......#.#",
+    "#.#.###.###.#.#",
+    "#.#.....G.#.#.#",
+    "#.#.#.#####.#.#",
+    "#...#A......#.#",
+    "#.#####.#####.#",
+    "#.............#",
+    "###############"
+  ]
+}

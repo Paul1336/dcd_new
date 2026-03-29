@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "easy",
+  "path_length": 25,
+  "interior_walls": 64,
+  "description": "A simple maze layout with an easy path from the agent start to the goal, featuring a few walls and ample open space.",
+  "ascii": [
+    "###############",
+    "#...#.........#",
+    "#.#.#.#####...#",
+    "#.#.#.........#",
+    "#...#.#######.#",
+    "#.#...#.....G.#",
+    "#.#.###.###.#.#",
+    "#.....#.....#.#",
+    "#.###.#.#####.#",
+    "#.#...#.......#",
+    "#.#.###########",
+    "#...#.........#",
+    "#.#.#########.#",
+    "#A..........#.#",
+    "###############"
+  ]
+}

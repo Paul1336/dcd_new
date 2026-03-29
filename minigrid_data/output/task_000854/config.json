@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 26,
+  "interior_walls": 70,
+  "description": "A challenging maze with dense walls and a long winding path from the agent at the top left to the goal at the bottom right.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.#.#.#.#####.#",
+    "#.#.#.....#.#.#",
+    "#.#.#####.#.#.#",
+    "#.......#A#.#.#",
+    "#####.#.###.#.#",
+    "#.....#.....#.#",
+    "#####.#####.#.#",
+    "#.#.#.......#.#",
+    "#.#.#######.#.#",
+    "#...#.....#...#",
+    "#.###.#.###.###",
+    "#.....#...#G..#",
+    "###############"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 36,
+  "interior_walls": 68,
+  "description": "A dense maze with narrow corridors and walls requiring strategic navigation from the starting point to the goal.",
+  "ascii": [
+    "###############",
+    "#.............#",
+    "#.#.###.###.#.#",
+    "#.#...#...#.#.#",
+    "#.###.#.#.###.#",
+    "#...#.#.#.....#",
+    "#.#.#.#.#####.#",
+    "#.#.#.....#...#",
+    "#.#######.###.#",
+    "#.........#.#.#",
+    "#.###.#####.#.#",
+    "#.#...#.....#.#",
+    "#.###.#####.#.#",
+    "#A....#......G#",
+    "###############"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 15,
+  "interior_walls": 71,
+  "description": "This maze features a series of narrow corridors with a single, winding path from the agent's start location 'A' to the goal 'G'.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.#.###.#####.#",
+    "#.#.....#.....#",
+    "#.###.#.#####.#",
+    "#...#A#.......#",
+    "#####.#.#######",
+    "#.....#.......#",
+    "#.#####.#######",
+    "#.....#.......#",
+    "#.#####.#######",
+    "#.....#.......#",
+    "#####G#########",
+    "#.............#",
+    "###############"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 2,
+  "interior_walls": 71,
+  "description": "This maze features a complex layout with walls forming narrow corridors that challenge the agent to find the goal.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.###.#.#####.#",
+    "#.#.....#...#.#",
+    "#.#.#####.#.#.#",
+    "#.#.......#.#.#",
+    "#.#######.#.#.#",
+    "#.#.....#G#.#.#",
+    "#.#####.#.#.#.#",
+    "#.....#.#A.#.#",
+    "#####.#.###.#.#",
+    "#.......#.....#",
+    "#.#############",
+    "#.............#",
+    "###############"
+  ]
+}

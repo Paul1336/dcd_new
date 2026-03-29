@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 21,
+  "interior_walls": 68,
+  "description": "A challenging maze featuring narrow corridors and dense wall placements forcing a long path from start to goal.",
+  "ascii": [
+    "###############",
+    "#...#.........#",
+    "#.#.#.#####.#.#",
+    "#.#.#.....#.#.#",
+    "#.#####.#.#.#.#",
+    "#.......#.#...#",
+    "#.#####.#.#.###",
+    "#.#.....#...G.#",
+    "#.#.#####.#####",
+    "#.#...........#",
+    "#.#####.#####.#",
+    "#.....#.......#",
+    "###.#####.#####",
+    "#A..........#.#",
+    "###############"
+  ]
+}

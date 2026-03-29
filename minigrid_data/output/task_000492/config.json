@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 19,
+  "interior_walls": 68,
+  "description": "A complex maze featuring winding paths and dense walls, requiring careful navigation from the bottom left to the goal in the top right corner.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.###.#.#####.#",
+    "#.#...#.....#.#",
+    "#.#.#####.###.#",
+    "#.#.....G.#...#",
+    "#.###.###.#.#.#",
+    "#.....#...#.#.#",
+    "###.#.###.#.#.#",
+    "#...#.....#.#.#",
+    "#.#####.###.#.#",
+    "#.....#.....#.#",
+    "###.#.#.#####.#",
+    "#A..#.....#...#",
+    "###############"
+  ]
+}

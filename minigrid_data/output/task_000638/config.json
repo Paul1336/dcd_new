@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 40,
+  "interior_walls": 71,
+  "description": "A medium difficulty maze featuring a path from an agent to a goal with a series of walls that require careful navigation.",
+  "ascii": [
+    "###############",
+    "#.............#",
+    "#.#####.#######",
+    "#.#...#.......#",
+    "#.#.#####.#####",
+    "#...#...#....#",
+    "#####.#.##.#..#",
+    "#.....#....#.G#",
+    "#.####.#####..#",
+    "#.........#..#.",
+    "#######.######.#",
+    "#A....#.......#",
+    "#.#####.######.#",
+    "#.............#",
+    "###############"
+  ]
+}

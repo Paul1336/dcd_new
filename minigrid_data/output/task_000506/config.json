@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 11,
+  "interior_walls": 67,
+  "description": "A medium difficulty maze with a clear path from the agent's start to the goal amidst walls forming tricky corridors.",
+  "ascii": [
+    "###############",
+    "#...#.........#",
+    "#.#.#.#.#####.#",
+    "#.#...#.#...#.#",
+    "#.#.###.#.#.#.#",
+    "#...#.....#.#.#",
+    "#####.#####.#.#",
+    "#.....#...#.#.#",
+    "#.#.#####.#.#.#",
+    "#.#...#...#...#",
+    "#.#.#.#.#####.#",
+    "#...#.........#",
+    "#.#.###########",
+    "#A..........G.#",
+    "###############"
+  ]
+}

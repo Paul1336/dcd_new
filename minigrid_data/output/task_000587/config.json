@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 14,
+  "interior_walls": 69,
+  "description": "A maze with a single path that forces the agent through multiple turns and is lined with walls creating a complex route.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.###.#.#####.#",
+    "#.#...#.....#.#",
+    "#.#.#####.###.#",
+    "#...#.....#..G#",
+    "#######.###.###",
+    "#.....#...#...#",
+    "#.###.#.#.###.#",
+    "#.....#.#...#.#",
+    "#.#####.#.###.#",
+    "#...#.....#...#",
+    "#.#.###.#.###.#",
+    "#...#.....#A..#",
+    "###############"
+  ]
+}

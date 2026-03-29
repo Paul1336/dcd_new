@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 27,
+  "interior_walls": 71,
+  "description": "A medium difficulty maze with an Agent starting at 'A' and a goal at 'G', featuring winding corridors and walls that create a challenge.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.###.#.#####.#",
+    "#.#...#...#...#",
+    "#.#.#####.#.#.#",
+    "#.#...#...#.#.#",
+    "#.#####.#.###.#",
+    "#.......#.....#",
+    "#####.#########",
+    "#.....#.......#",
+    "#.###.#.#####.#",
+    "#...#...#...G.#",
+    "###.#####.#.###",
+    "#A....#......#",
+    "###############"
+  ]
+}

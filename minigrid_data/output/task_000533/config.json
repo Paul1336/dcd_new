@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 5,
+  "interior_walls": 75,
+  "description": "A complex maze with a single agent starting in the bottom left corner and a goal positioned towards the top right corner, requiring strategic navigation through dense walls.",
+  "ascii": [
+    "###############",
+    "#...###......#",
+    "#.#...#.#..###",
+    "#.#.#.#.#....#",
+    "#.#.#.#.#####.#",
+    "#...#.....#..#",
+    "###.#####.#.#.#",
+    "#...#.....#.#.#",
+    "#.###.#####.#.#",
+    "#......#....#.#",
+    "#######.#####.#",
+    "#.G....#...#.#",
+    "###.###.#.#.#.#",
+    "#A.....#.#..###",
+    "###############"
+  ]
+}

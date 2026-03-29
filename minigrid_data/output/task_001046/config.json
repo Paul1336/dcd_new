@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 12,
+  "interior_walls": 71,
+  "description": "A complex maze with winding paths, dense walls, and the agent positioned at one corner, while the goal is located at the far opposite corner.",
+  "ascii": [
+    "###############",
+    "# ...#.....#..#",
+    "#.#.#.#.#####.#.",
+    "#.#...#.....#.#.",
+    "#.##### #.#.#.#.",
+    "#.#...###.#.#.#.",
+    "#.###.###.#.#.#.",
+    "#...#.....#A#.#.",
+    "###.#.#####.#.#.",
+    "#...#..#....#.#.",
+    "#####.#.##.#.#.#.",
+    "#.....#....#...#",
+    "#.#.###.###.###.#",
+    "#...#....G....#.",
+    "###############"
+  ]
+}

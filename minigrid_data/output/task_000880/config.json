@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 26,
+  "interior_walls": 71,
+  "description": "This maze features a complex layout with a clear but winding route from the agent's start position to the goal.",
+  "ascii": [
+    "###############",
+    "#...#.........#",
+    "#.#.#.#####.#.#",
+    "#.#.#.....#.#.#",
+    "#.###.#####.#.#",
+    "#.....#.....#.#",
+    "#####.#.#####.#",
+    "#A....#.....#.#",
+    "#####.#####.#.#",
+    "#.....#......G#",
+    "#.#####.#######",
+    "#.#.........#.#",
+    "#.###.#####.#.#",
+    "#.....#.....#.#",
+    "###############"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 50,
+  "interior_walls": 71,
+  "description": "This maze features a complex path from the bottom left corner to the top right corner, filled with dense walls and a long winding route.",
+  "ascii": [
+    "###############",
+    "#...#...#.....#",
+    "#.#.#.#.###.#.#",
+    "#.#...#.....#.#",
+    "#.#####.#####.#",
+    "#.....#.....#.#",
+    "#####.#.#####.#",
+    "#...#.#...#...",
+    "#.#.#.###.#.#.#",
+    "#.#...#...#.#.#",
+    "#.###.#.###.#.#",
+    "#...#...#...#G#",
+    "###.#####.###.#",
+    "#A....#.....#.#",
+    "###############"
+  ]
+}

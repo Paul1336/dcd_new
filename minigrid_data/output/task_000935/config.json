@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 18,
+  "interior_walls": 67,
+  "description": "This maze features a winding path from the agent's start position to the goal, with numerous walls creating strategic detours.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.###.#.#####.#",
+    "#.#...#.....#.#",
+    "#.#.###.###.#.#",
+    "#...#.....#...#",
+    "#.#####.###.#.#",
+    "#...#........G#",
+    "###.#.#######.#",
+    "#...#.........#",
+    "#.###.#######.#",
+    "#......#......#",
+    "#.###########.#",
+    "#A...........#",
+    "###############"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 24,
+  "interior_walls": 68,
+  "description": "A maze with a winding path leading from the agent at A to the goal at G, surrounded by walls and requiring navigation through narrow corridors.",
+  "ascii": [
+    "###############",
+    "#.............#",
+    "#.###.###.#####",
+    "#...#.....#...#",
+    "#.###.###.#.#.#",
+    "#.......#.#.G.#",
+    "#####.###.#.#.#",
+    "#.....#.....#.#",
+    "#.###.#.#####.#",
+    "#.A.#.#.......#",
+    "#######.######.#",
+    "#.....#.......#",
+    "#.#####.#######",
+    "#.............#",
+    "###############"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 32,
+  "interior_walls": 73,
+  "description": "This maze features a winding path from the agent start point to the goal, requiring navigation through strategic corridors.",
+  "ascii": [
+    "###############",
+    "#..#.........#.#",
+    "#.#.#########.#.#",
+    "#.#.........#.#.#",
+    "#.#.#######.#.#.#",
+    "#.#.#.....#.#.#.#",
+    "#.#.#.###.#.#.#.#",
+    "#...#.#G#....#.#",
+    "#####.#.#.#####.#",
+    "#...#...#.....#.#",
+    "#.#.#####.#####.#",
+    "#.#.........#...#",
+    "#.#########.#.#.#",
+    "#A..........#.#.#",
+    "###############"
+  ]
+}

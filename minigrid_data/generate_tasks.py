@@ -36,6 +36,74 @@ _CHAR_TO_CELL = {'#': _WALL, '.': _EMPTY, 'A': _AGENT, 'G': _GOAL}
 _IDX_TO_CHAR  = {1: '.', 2: '#', 8: 'G', 10: 'A'}
 
 
+
+def _sanitize_grid_rows(rows, size):
+    """Normalize LLM-generated grid rows: fix off-by-one dims and common char substitutions."""
+    char_map = {'S': 'A', 's': '.', 'E': 'G', 'e': '.', 'O': '.', 'o': '.', ' ': '.'}
+
+    # Preprocess: skip blanks, truncate/pad each row to exactly `size` chars
+    processed = []
+    for row in rows:
+        if not row.strip():
+            continue
+        row = row[:size].ljust(size, '#')
+        row = ''.join(char_map.get(c, c) for c in row)
+        # Force left and right outer walls — valid maze format requires '#' on both ends.
+        # This also fixes truncation artifacts where a wider-than-expected row loses its
+        # closing '#' after [:size].
+        row = '#' + row[1:-1] + '#'
+        processed.append(row)
+
+    if len(processed) < size:
+        return None
+    if len(processed) == size:
+        return processed
+
+    # More rows than needed: find a window of `size` rows with top+bottom all-wall borders.
+    # The model sometimes emits extra rows above or below the actual grid.
+    all_wall = '#' * size
+    for start in range(len(processed) - size + 1):
+        candidate = processed[start:start + size]
+        if candidate[0] == all_wall and candidate[-1] == all_wall:
+            return candidate
+
+    # No perfect bordered window found; fall back to last `size` rows
+    return processed[-size:]
+
+
+def _sanitize_grid_rows(rows, size):
+    """Normalize LLM-generated grid rows: fix off-by-one dims and common char substitutions."""
+    char_map = {'S': 'A', 's': '.', 'E': 'G', 'e': '.', 'O': '.', 'o': '.', ' ': '.'}
+
+    # Preprocess: skip blanks, truncate/pad each row to exactly `size` chars
+    processed = []
+    for row in rows:
+        if not row.strip():
+            continue
+        row = row[:size].ljust(size, '#')
+        row = ''.join(char_map.get(c, c) for c in row)
+        # Force left and right outer walls — valid maze format requires '#' on both ends.
+        # This also fixes truncation artifacts where a wider-than-expected row loses its
+        # closing '#' after [:size].
+        row = '#' + row[1:-1] + '#'
+        processed.append(row)
+
+    if len(processed) < size:
+        return None
+    if len(processed) == size:
+        return processed
+
+    # More rows than needed: find a window of `size` rows with top+bottom all-wall borders.
+    # The model sometimes emits extra rows above or below the actual grid.
+    all_wall = '#' * size
+    for start in range(len(processed) - size + 1):
+        candidate = processed[start:start + size]
+        if candidate[0] == all_wall and candidate[-1] == all_wall:
+            return candidate
+
+    # No perfect bordered window found; fall back to last `size` rows
+    return processed[-size:]
+
 # ---------- ASCII ↔ encoding ----------
 
 def ascii_to_encoding(rows: list, size: int):
@@ -243,13 +311,14 @@ def generate_one(client, args, task_id: int, difficulty: str) -> bool:
             enc[s - 2, s - 2] = _GOAL
             parsed = {'description': 'dry-run task', 'grid': encoding_to_ascii(enc)}
         else:
-            parsed = call_openai(client, args.size, args.n_walls, difficulty, args.model,
+            n_walls = {'easy': 10, 'medium': 25, 'hard': 50}.get(difficulty, args.n_walls) if args.difficulty == 'mixed' else args.n_walls
+            parsed = call_openai(client, args.size, n_walls, difficulty, args.model,
                                  debug=args.debug)
             if parsed is None:
                 if args.debug:
                     print(f'  [debug] attempt {attempt}: call_openai returned None')
                 continue
-            enc = ascii_to_encoding(parsed.get('grid', []), args.size)
+            enc = ascii_to_encoding(_sanitize_grid_rows(parsed.get('grid', []), args.size) or parsed.get('grid', []), args.size)
 
         metrics = validate_encoding(enc, args.size)
         if metrics is None:

@@ -1,0 +1,25 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 47,
+  "interior_walls": 69,
+  "description": "This maze features a series of interconnected corridors that lead the agent from the start to the goal while avoiding walls.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.###.#.#####.#",
+    "#.#...#.....#.#",
+    "#.#.#####.###.#",
+    "#.#.....#.....#",
+    "#.#####.#####.#",
+    "#...#...#...G.#",
+    "#.#.#.#####.#.#",
+    "#.#.#.........#",
+    "#.#.###########",
+    "#.............#",
+    "#.#####.#.####.#",
+    "#.....#A#.....#",
+    "###############",
+    "###############"
+  ]
+}

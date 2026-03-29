@@ -1,0 +1,25 @@
+{
+  "size": 15,
+  "difficulty": "easy",
+  "path_length": 18,
+  "interior_walls": 65,
+  "description": "This maze features a mostly open layout with minimal walls, allowing for a straightforward path from the agent to the goal.",
+  "ascii": [
+    "###############",
+    "#.....#......#",
+    "#.....#...#..#",
+    "#.###.#...#..#",
+    "#...#.#.#####.#",
+    "#...#...G....#",
+    "#####.#########",
+    "#...#.........#",
+    "#.#####.###.###",
+    "#.............#",
+    "#.#####.###.###",
+    "#.....#.......#",
+    "#####.#.#######",
+    "#.A...........#",
+    "###############",
+    "###############"
+  ]
+}

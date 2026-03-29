@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "hard",
+  "path_length": 11,
+  "interior_walls": 66,
+  "description": "A challenging maze with narrow corridors and strategic wall placements, connecting an agent at the bottom left to a goal at the bottom right.",
+  "ascii": [
+    "###############",
+    "#....###......#",
+    "#.#..#.#..###.#",
+    "#.#..#.#......#",
+    "#.#..#..#######",
+    "#.####...#....#",
+    "#......#.#..###",
+    "#######.#..#...",
+    "#..#....#.#.###",
+    "#.##.#####...##",
+    "#..#....##....#",
+    "#.######......#",
+    "###....###..###",
+    "#A..........G.#",
+    "###############"
+  ]
+}

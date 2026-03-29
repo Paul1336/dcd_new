@@ -1,0 +1,24 @@
+{
+  "size": 15,
+  "difficulty": "medium",
+  "path_length": 48,
+  "interior_walls": 74,
+  "description": "A medium difficulty maze with a single agent start and goal, featuring walls that create deliberate detours.",
+  "ascii": [
+    "###############",
+    "#.....#.......#",
+    "#.###.#.#####.#",
+    "#.###.#.#...#.#",
+    "#.###.#.#.#.#.#",
+    "#...#...#.#.#.#",
+    "#####.###.#.#.#",
+    "#...#.....#.#.#",
+    "#.###.#####.#.#",
+    "#.....#.....#.#",
+    "#####.#######.#",
+    "#...#.......#.#",
+    "#.#.#####.###.#",
+    "#A#.......#..G#",
+    "###############"
+  ]
+}
