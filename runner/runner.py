@@ -1,5 +1,24 @@
 from enum import Enum
-from baselines.common.running_mean_std import RunningMeanStd
+import numpy as np
+
+
+class RunningMeanStd:
+    """Minimal running mean/variance tracker (replaces baselines dependency)."""
+    def __init__(self, shape=()):
+        self.mean  = np.zeros(shape, dtype=np.float64)
+        self.var   = np.ones(shape,  dtype=np.float64)
+        self.count = 1e-4
+
+    def update(self, x):
+        x = np.asarray(x, dtype=np.float64)
+        batch_mean, batch_var, batch_count = x.mean(axis=0), x.var(axis=0), x.shape[0]
+        delta = batch_mean - self.mean
+        total = self.count + batch_count
+        self.mean  = self.mean + delta * batch_count / total
+        m_a = self.var  * self.count
+        m_b = batch_var * batch_count
+        self.var   = (m_a + m_b + delta ** 2 * self.count * batch_count / total) / total
+        self.count = total
 from collections import deque
 from typing import List, Optional, Union
 from interfaces import SampledLevelInfo, RunnerStats, RunnerStateDict

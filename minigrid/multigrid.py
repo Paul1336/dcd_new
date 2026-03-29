@@ -153,7 +153,7 @@ class Grid(minigrid.Grid):
 
     def render(self, tile_size, highlight_mask=None):
         if highlight_mask is None:
-            highlight_mask = np.zeros(shape=(self.width, self.height), dtype=np.bool)
+            highlight_mask = np.zeros(shape=(self.width, self.height), dtype=bool)
 
         width_px = self.width * tile_size
         height_px = self.height * tile_size
@@ -199,7 +199,7 @@ class Grid(minigrid.Grid):
     def decode(array):
         width, height, channels = array.shape
         assert channels == 3
-        vis_mask = np.ones(shape=(width, height), dtype=np.bool)
+        vis_mask = np.ones(shape=(width, height), dtype=bool)
         grid = Grid(width, height)
         for i in range(width):
             for j in range(height):
@@ -566,7 +566,7 @@ class MultiGridEnv(minigrid.MiniGridEnv):
             vis_mask = grid.process_vis(
                 agent_pos=(self.agent_view_size // 2, self.agent_view_size - 1))
         else:
-            vis_mask = np.ones(shape=(grid.width, grid.height), dtype=np.bool)
+            vis_mask = np.ones(shape=(grid.width, grid.height), dtype=bool)
 
         agent_pos = grid.width // 2, grid.height - 1
         if self.carrying[agent_id]:
@@ -596,7 +596,7 @@ class MultiGridEnv(minigrid.MiniGridEnv):
         return image, self.agent_dir[agent_id]
 
     def compute_agent_visibility_mask(self, agent_id):
-        highlight_mask = np.zeros(shape=(self.width, self.height), dtype=np.bool)
+        highlight_mask = np.zeros(shape=(self.width, self.height), dtype=bool)
         _, vis_mask = self.gen_obs_grid(agent_id)
         f_vec = self.dir_vec[agent_id]
         r_vec = self.right_vec[agent_id]

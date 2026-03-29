@@ -12,6 +12,23 @@
 from .vec_env import VecEnvWrapper
 import numpy as np
 
+
+class _RunningMeanStd:
+    def __init__(self, shape=(), epsilon=1e-4):
+        self.mean  = np.zeros(shape, dtype=np.float64)
+        self.var   = np.ones(shape,  dtype=np.float64)
+        self.count = epsilon
+
+    def update(self, x):
+        x = np.asarray(x, dtype=np.float64)
+        b_mean, b_var, b_count = x.mean(axis=0), x.var(axis=0), x.shape[0]
+        delta = b_mean - self.mean
+        total = self.count + b_count
+        self.mean  = self.mean + delta * b_count / total
+        self.var   = (self.var * self.count + b_var * b_count + delta**2 * self.count * b_count / total) / total
+        self.count = total
+
+
 class VecNormalize(VecEnvWrapper):
     """
     A vectorized wrapper that normalizes the observations
@@ -21,17 +38,13 @@ class VecNormalize(VecEnvWrapper):
     def __init__(self, venv, ob=True, ret=True, clipob=10., cliprew=10., gamma=0.99, epsilon=1e-8, use_tf=False):
         VecEnvWrapper.__init__(self, venv)
         if use_tf:
-            from baselines.common.running_mean_std import TfRunningMeanStd
-            self.ob_rms = TfRunningMeanStd(shape=self.observation_space.shape, scope='ob_rms') if ob else None
-            self.ret_rms = TfRunningMeanStd(shape=(), scope='ret_rms') if ret else None
-        else:
-            from baselines.common.running_mean_std import RunningMeanStd
-            self.ob_rms = RunningMeanStd(shape=self.observation_space.shape) if ob else None
-            self.ret_rms = RunningMeanStd(shape=()) if ret else None
-        self.clipob = clipob
+            raise RuntimeError("use_tf=True is not supported (TensorFlow dependency removed).")
+        self.ob_rms  = _RunningMeanStd(shape=self.observation_space.shape) if ob else None
+        self.ret_rms = _RunningMeanStd(shape=()) if ret else None
+        self.clipob  = clipob
         self.cliprew = cliprew
-        self.ret = np.zeros(self.num_envs)
-        self.gamma = gamma
+        self.ret     = np.zeros(self.num_envs)
+        self.gamma   = gamma
         self.epsilon = epsilon
 
     def step_wait(self):
@@ -66,7 +79,7 @@ class VecNormalize(VecEnvWrapper):
         self.ret = np.zeros(self.num_envs)
         obs = self.venv.reset_random()
         return self._obfilt(obs)
-        
+
     def reset_alp_gmm(self, level):
         self.ret = np.zeros(self.num_envs)
         obs = self.venv.reset_alp_gmm(level)
