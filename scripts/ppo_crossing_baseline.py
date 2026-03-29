@@ -91,7 +91,12 @@ def flat_obs(obs_dict: dict) -> np.ndarray:
     """Convert {image:(H,W,3), direction:scalar} → float32 vector (H*W*3 + 4,)."""
     img = obs_dict['image'].flatten().astype(np.float32)
     d = obs_dict['direction']
-    d = int(d.flat[0]) if hasattr(d, 'flat') else int(d)
+    if hasattr(d, 'flat'):
+        d = int(d.flat[0])
+    elif isinstance(d, (list, tuple)):
+        d = int(d[0])
+    else:
+        d = int(d)
     dir_oh = np.zeros(4, dtype=np.float32)
     dir_oh[d] = 1.0
     return np.concatenate([img, dir_oh])
