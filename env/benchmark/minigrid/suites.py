@@ -146,7 +146,7 @@ def _make_official_suite(
     official_env_id, short = _OFFICIAL_ENV_IDS[suite_name]
     env_names = [f'{short}_seed{i:04d}' for i in range(num_tasks)]
     env_fns = [
-        (lambda eid, s: lambda: OfficialMiniGridWrapper(eid, seed=s, agent_view_size=7))(
+        (lambda eid, s: lambda: OfficialMiniGridWrapper(eid, seed=s, agent_view_size=5))(
             official_env_id, base_seed + i
         )
         for i in range(num_tasks)
