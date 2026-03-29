@@ -45,6 +45,11 @@ def _ensure_official_minigrid_registered():
     """
     Import minigrid.envs from site-packages to register all official MiniGrid
     envs with gymnasium.  Only runs once per process.
+
+    Strategy: load the official package, keep its minigrid.envs.* submodules in
+    sys.modules (so gymnasium.make() can import them later), but restore the
+    local dcd_new/minigrid/ fork as the top-level 'minigrid' entry so that the
+    rest of the codebase continues to see the custom MultiGrid fork.
     """
     global _official_minigrid_registered
     if _official_minigrid_registered:
@@ -52,8 +57,8 @@ def _ensure_official_minigrid_registered():
 
     sp = _find_site_minigrid_dir()
 
-    # Stash and remove every 'minigrid*' entry from sys.modules so that the
-    # subsequent import picks up the site-packages version, not the local fork.
+    # Stash and remove every 'minigrid*' entry so the next import picks up
+    # the site-packages version instead of the local fork.
     stashed = {k: sys.modules.pop(k)
                for k in list(sys.modules)
                if k == 'minigrid' or k.startswith('minigrid.')}
@@ -61,16 +66,22 @@ def _ensure_official_minigrid_registered():
     sys.path.insert(0, sp)
     try:
         import minigrid.envs  # noqa: F401 — registers all official envs with gymnasium
+        # Capture every official submodule (minigrid.envs.*, minigrid.core.*, …)
+        # but NOT the top-level 'minigrid' itself.
+        official_submods = {k: sys.modules[k]
+                            for k in list(sys.modules)
+                            if k.startswith('minigrid.') and k in sys.modules}
     finally:
-        # Remove the prepended path.
         if sys.path and sys.path[0] == sp:
             sys.path.pop(0)
-        # Remove the official minigrid modules we just loaded …
+        # Remove everything minigrid-related …
         for k in list(sys.modules):
             if k == 'minigrid' or k.startswith('minigrid.'):
                 del sys.modules[k]
-        # … and restore the local fork.
+        # … restore the local fork as top-level 'minigrid' …
         sys.modules.update(stashed)
+        # … and re-add the official submodules so gymnasium.make() can find them.
+        sys.modules.update(official_submods)
 
     _official_minigrid_registered = True
 
