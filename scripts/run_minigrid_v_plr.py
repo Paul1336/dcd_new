@@ -11,24 +11,24 @@ PARAMS = {
     # Rollout / PPO
     'num_processes':                32,
     'num_env_steps':                30_000_000,
-    'num_steps':                    256,
-    'ppo_epoch':                    5,
-    'num_mini_batch':               1,
-    'lr':                           1e-4,
+    'num_steps':                    128,
+    'ppo_epoch':                    4,
+    'num_mini_batch':               4,
+    'lr':                           2.5e-4,
     'max_grad_norm':                0.5,
-    'gamma':                        0.995,
+    'gamma':                        0.99,
     'gae_lambda':                   0.95,
     'value_loss_coef':              0.5,
     'entropy_coef':                 0.01,
     'adv_entropy_coef':             0.01,
-    'clip_value_loss':              False,
+    'clip_value_loss':              True,
     'clip_param':                   0.2,
     'normalize_returns':            False,
 
     # Architecture
     'recurrent_agent':              True,
     'recurrent_adversary_env':      False,
-    'recurrent_hidden_size':        256,
+    'recurrent_hidden_size':        128,
 
     # Env-specific
     'reward_shaping':               True,
@@ -51,7 +51,7 @@ PARAMS = {
     'use_reset_random_dr':          False,
 
     # Evaluation
-    'test_env_names':               'MultiGrid-VLMSampled-v0,MultiGrid-RandomGenerated-v0,MultiGrid-FourRooms-v0,MultiGrid-SimpleCrossing-v0',
+    'test_env_names':               'MultiGrid-VLMSampled-v0,MultiGrid-RandomGenerated-v0,MultiGrid-SimpleCrossing-v0',
     'test_interval':                20,
     'test_num_episodes':            10,
     'test_num_processes':           1,

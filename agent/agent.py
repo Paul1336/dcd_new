@@ -283,6 +283,8 @@ class ACAgent:
                     adv_targ,
                 ) = sample
 
+                adv_targ = (adv_targ - adv_targ.mean()) / (adv_targ.std() + 1e-8)
+
                 if use_kl_loss:
                     values, action_log_probs, dist_entropy, _, dist_protagonist = (
                         self.actor_critic.evaluate_actions(
@@ -375,10 +377,6 @@ class ACAgent:
                 value_loss_epoch += value_loss.item()
                 action_loss_epoch += action_loss.item()
                 dist_entropy_epoch += dist_entropy.item()
-
-            if approx_kl is not None and approx_kl > 0.03:
-                print("break due to approx_kl: ", approx_kl, "e: ", e)
-                break
 
             used_epoch += 1
 
