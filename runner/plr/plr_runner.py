@@ -177,7 +177,11 @@ class PLRRunner(Runner):
         N = args.num_processes
 
         # --- decide: replay or new level ---
-        level_replay = self.level_sampler.sample_replay_decision()
+        # DR mode: always generate fresh random levels, never replay from buffer
+        if getattr(args, 'use_reset_random_dr', False):
+            level_replay = False
+        else:
+            level_replay = self.level_sampler.sample_replay_decision()
 
         if level_replay:
             int_seeds = [self.level_sampler.sample_replay_level() for _ in range(N)]
@@ -217,7 +221,8 @@ class PLRRunner(Runner):
                 else:
                     action_log_prob = action_log_dist
 
-            obs, reward, done, infos = self.venv.step_env(self.agent.process_action(action.cpu()))
+            _reset_random = getattr(args, 'use_reset_random_dr', False)
+            obs, reward, done, infos = self.venv.step_env(self.agent.process_action(action.cpu()), reset_random=_reset_random)
             if args.clip_reward:
                 reward = torch.clamp(reward, -args.clip_reward, args.clip_reward)
 
@@ -242,19 +247,32 @@ class PLRRunner(Runner):
                             self.agent.storage.insert_truncated_obs(info['truncated_obs'], index=i)
 
                     # sample next level
-                    if level_replay:
+                    if getattr(args, 'use_reset_random_dr', False):
+                        # DR: stay on the same level within rollout; worker already
+                        # called reset_agent() so obs[i] is already correct.
+                        pass
+                    elif level_replay:
                         new_int_seed = self.level_sampler.sample_replay_level()
+                        new_level_id = self.seed2level_id[new_int_seed]
+                        obs_i = self.venv.reset_to_level(new_level_id, i)
+                        self._set_obs_at_index(obs, obs_i, i)
+                        self.current_int_seeds[i] = new_int_seed
+                        self.total_seeds_collected += 1
                     elif self._vlm_mode:
                         new_int_seed = self._sample_new_level_int_seed()
+                        new_level_id = self.seed2level_id[new_int_seed]
+                        obs_i = self.venv.reset_to_level(new_level_id, i)
+                        self._set_obs_at_index(obs, obs_i, i)
+                        self.current_int_seeds[i] = new_int_seed
+                        self.total_seeds_collected += 1
                     else:
                         # Procedural: replay from known pool
                         new_int_seed = random.choice(list(self.seed2level_id.keys()))
-
-                    new_level_id = self.seed2level_id[new_int_seed]
-                    obs_i = self.venv.reset_to_level(new_level_id, i)
-                    self._set_obs_at_index(obs, obs_i, i)
-                    self.current_int_seeds[i] = new_int_seed
-                    self.total_seeds_collected += 1
+                        new_level_id = self.seed2level_id[new_int_seed]
+                        obs_i = self.venv.reset_to_level(new_level_id, i)
+                        self._set_obs_at_index(obs, obs_i, i)
+                        self.current_int_seeds[i] = new_int_seed
+                        self.total_seeds_collected += 1
 
             masks             = torch.FloatTensor([[0.0] if d else [1.0] for d in done])
             bad_masks         = torch.FloatTensor([[0.0] if 'truncated'   in info else [1.0] for info in infos])
