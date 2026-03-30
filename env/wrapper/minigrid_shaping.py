@@ -134,20 +134,31 @@ class MiniGridShapingWrapper:
 
     # ── PLR / SFL interface ──────────────────────────────────────────────────
 
+    def _fix_timelimit(self):
+        # gym.make() wraps the env in gym's TimeLimit which lacks reset_to_level;
+        # those calls proxy via __getattr__ and never set _elapsed_steps, so we
+        # must do it manually here after every non-standard reset.
+        if hasattr(self._env, '_elapsed_steps'):
+            self._env._elapsed_steps = 0
+
     def reset_to_level(self, level):
         obs = self._env.reset_to_level(level)
+        self._fix_timelimit()
         return self._post_reset(obs)
 
     def reset_random(self):
         obs = self._env.reset_random()
+        self._fix_timelimit()
         return self._post_reset(obs)
 
     def reset_agent(self):
         obs = self._env.reset_agent()
+        self._fix_timelimit()
         return self._post_reset(obs)
 
     def mutate_level(self, num_edits=1):
         obs = self._env.mutate_level(num_edits=num_edits)
+        self._fix_timelimit()
         return self._post_reset(obs)
 
     # ── Transparent attribute forwarding ────────────────────────────────────
