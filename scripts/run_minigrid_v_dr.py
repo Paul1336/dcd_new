@@ -31,7 +31,7 @@ PARAMS = {
     'recurrent_hidden_size':        128,
 
     # Env-specific
-    'reward_shaping':               False,
+    'reward_shaping':               True,
     'use_categorical_adv':          True,
     'use_skip':                     False,
     'choose_start_pos':             False,
