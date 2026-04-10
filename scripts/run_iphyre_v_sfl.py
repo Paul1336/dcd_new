@@ -101,7 +101,8 @@ NUM_TRIALS = 1
 
 
 def build_cmd(seed, device, log_dir, method, exp_name,
-              procedural=False, vlm_embedding=False, test=False, fake_clip=False):
+              procedural=False, vlm_embedding=False, test=False, fake_clip=False,
+              ball_relative=False):
     params = dict(PARAMS)
     if procedural:
         params.update(PROCEDURAL_OVERRIDES)
@@ -113,6 +114,8 @@ def build_cmd(seed, device, log_dir, method, exp_name,
         params.update(TEST_OVERRIDES)
     if fake_clip:
         params['fake_clip'] = True
+    if ball_relative:
+        params['use_ball_relative'] = True
     cmd = ['python', 'train.py']
     for k, v in params.items():
         cmd.append(f'--{k}={v}')
@@ -165,6 +168,8 @@ if __name__ == '__main__':
                         help='Use frozen CLIP image embeddings instead of symbolic observations.')
     parser.add_argument('--fake_clip',     action='store_true',
                         help='Replace CLIP with zero embeddings for timing (requires --vlm_embedding).')
+    parser.add_argument('--ball_relative', action='store_true',
+                        help='Encode all positions relative to the ball center.')
     args = parser.parse_args()
 
     if args.procedural:
@@ -191,6 +196,7 @@ if __name__ == '__main__':
             vlm_embedding=args.vlm_embedding,
             test=args.test,
             fake_clip=args.fake_clip,
+            ball_relative=args.ball_relative,
         )
         for i in range(num_trials)
     ]
@@ -204,6 +210,8 @@ if __name__ == '__main__':
         mode_parts.append('VLM-Embedding')
     if args.fake_clip:
         mode_parts.append('fake-CLIP')
+    if args.ball_relative:
+        mode_parts.append('BallRelative')
     mode_label = f' [{", ".join(mode_parts)}]' if mode_parts else ''
 
     print(f'=== {num_trials} trial(s) (seeds {BASE_SEED}–{BASE_SEED + num_trials - 1}){mode_label} ===\n')
