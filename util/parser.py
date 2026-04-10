@@ -721,6 +721,12 @@ class Parser:
         )
 
         self.parser.add_argument(
+            '--use_ball_relative',
+            type=str2bool, nargs='?', const=True, default=False,
+            help='Encode all object positions relative to the ball center.',
+        )
+
+        self.parser.add_argument(
             '--value_model_path',
             type=str,
             default=None,
