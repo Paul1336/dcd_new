@@ -4,6 +4,7 @@ import json
 
 TASK_SUITE_PATH = {
     "Iphyre-HandDesign-v0": "../iphyre/test_toy20250110/20250525/output_hand_test",
+    "Iphyre-HandDesign-v1": "../iphyre_hand_design_dataset",
     "Iphyre-ProceduralShift-v0": "../iphyre/test_toy20250110/20250602/output_eval_shift",
     "Iphyre-ProceduralRotate-v0": "../iphyre/test_toy20250110/20250602/output_eval_rotate",
     "Iphyre-VLMGeneratedShift-v0": "../iphyre/test_toy20250110/20250427/output_shift",

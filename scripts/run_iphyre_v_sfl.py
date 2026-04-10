@@ -51,7 +51,7 @@ PARAMS = {
     'learnability_staleness':               0.1,
 
     # Evaluation
-    'test_env_names':                       'Iphyre-HandDesign-v0,Iphyre-ProceduralRotate-v0,Iphyre-ProceduralShift-v0,Iphyre-VLMGeneratedRotate-v0,Iphyre-VLMGeneratedShift-v0',
+    'test_env_names':                       'Iphyre-HandDesign-v0,Iphyre-HandDesign-v1,Iphyre-ProceduralRotate-v0,Iphyre-ProceduralShift-v0,Iphyre-VLMGeneratedRotate-v0,Iphyre-VLMGeneratedShift-v0',
     'test_interval':                        20,
     'test_num_episodes':                    20,
     'test_num_processes':                   1,
