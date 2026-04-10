@@ -24,12 +24,14 @@ class IphyreNetwork(DeviceAwareModule):
         action_space,
         obs_type: str = "symbolic",
         should_freeze_embedding: bool = False,
+        use_ball_relative: bool = False,
     ):
         super(IphyreNetwork, self).__init__()
 
         self.rnn = None
         self.obs_type = obs_type
         self.should_freeze_embedding = should_freeze_embedding
+        self.use_ball_relative = use_ball_relative
 
         print('obs_type:', obs_type, '  should_freeze_embedding:', should_freeze_embedding)
 
@@ -107,8 +109,25 @@ class IphyreNetwork(DeviceAwareModule):
                 embed_dim = D   for obs_type="embedding" (same as obs_dim).
         """
         if self.should_use_deep_set:
-            blocks = x[:, :12 * 9].reshape(-1, 12, 9)
-            actions = x[:, 12 * 9:12 * 9 + 7 * 2].reshape(-1, 7, 2)
+            blocks = x[:, :12 * 9].reshape(-1, 12, 9).clone()
+            actions = x[:, 12 * 9:12 * 9 + 7 * 2].reshape(-1, 7, 2).clone()
+
+            if self.use_ball_relative:
+                # Ball: x1==x2, y1==y2 (center duplicated). Find it by |x1-x2| < 1.
+                # blocks: [B, 12, 9], features: [x1, y1, x2, y2, r, eli, dynamic, joint, spring]
+                is_ball = (blocks[:, :, 0] - blocks[:, :, 2]).abs() < 1.0  # [B, 12]
+                ball_idx = is_ball.float().argmax(dim=1)                    # [B]
+                b_idx = torch.arange(blocks.size(0), device=blocks.device)
+                ball_x = blocks[b_idx, ball_idx, 0]  # [B]
+                ball_y = blocks[b_idx, ball_idx, 1]  # [B]
+                # Shift all (x1, y1, x2, y2) to be ball-relative
+                blocks[:, :, 0] -= ball_x.unsqueeze(1)
+                blocks[:, :, 1] -= ball_y.unsqueeze(1)
+                blocks[:, :, 2] -= ball_x.unsqueeze(1)
+                blocks[:, :, 3] -= ball_y.unsqueeze(1)
+                # Shift action positions (x, y) to be ball-relative
+                actions[:, :, 0] -= ball_x.unsqueeze(1)
+                actions[:, :, 1] -= ball_y.unsqueeze(1)
             if self.should_freeze_embedding:
                 with torch.no_grad():
                     block_embeddings = self.block_embed_layer(blocks)

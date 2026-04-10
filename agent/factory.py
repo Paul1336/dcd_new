@@ -10,6 +10,7 @@ def create_agent(args, env, name="agent"):
         agent_type=name,
         obs_type=getattr(args, "obs_type", "symbolic"),
         should_freeze_embedding=getattr(args, "should_freeze_embedding", False),
+        use_ball_relative=getattr(args, "use_ball_relative", False),
     )
 
     if args.algo == "ppo":
