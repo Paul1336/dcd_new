@@ -25,6 +25,8 @@ class IphyreNetwork(DeviceAwareModule):
         obs_type: str = "symbolic",
         should_freeze_embedding: bool = False,
         use_ball_relative: bool = False,
+        aug_flip: bool = False,
+        aug_translate: float = 0.0,
     ):
         super(IphyreNetwork, self).__init__()
 
@@ -32,6 +34,8 @@ class IphyreNetwork(DeviceAwareModule):
         self.obs_type = obs_type
         self.should_freeze_embedding = should_freeze_embedding
         self.use_ball_relative = use_ball_relative
+        self.aug_flip = aug_flip
+        self.aug_translate = aug_translate
 
         print('obs_type:', obs_type, '  should_freeze_embedding:', should_freeze_embedding)
 
@@ -128,6 +132,39 @@ class IphyreNetwork(DeviceAwareModule):
                 # Shift action positions (x, y) to be ball-relative
                 actions[:, :, 0] -= ball_x.unsqueeze(1)
                 actions[:, :, 1] -= ball_y.unsqueeze(1)
+            # --- Data augmentation (training only) ---
+            if self.training and (self.aug_flip or self.aug_translate > 0.0):
+                # Horizontal flip: mirror x-coordinates for a random 50% of the batch.
+                # block[i] and action[i] are flipped together so index→block mapping is preserved.
+                if self.aug_flip:
+                    fm = (torch.rand(blocks.size(0), device=blocks.device) < 0.5).unsqueeze(1)  # [B,1]
+                    if self.use_ball_relative:
+                        # Ball is at origin; mirror around 0: x' = -x
+                        blocks[:, :, 0] = torch.where(fm, -blocks[:, :, 0], blocks[:, :, 0])
+                        blocks[:, :, 2] = torch.where(fm, -blocks[:, :, 2], blocks[:, :, 2])
+                        actions[:, :, 0] = torch.where(fm, -actions[:, :, 0], actions[:, :, 0])
+                    else:
+                        # Coords are in [0,1]; mirror around 0.5: x' = 1 - x
+                        blocks[:, :, 0] = torch.where(fm, 1.0 - blocks[:, :, 0], blocks[:, :, 0])
+                        blocks[:, :, 2] = torch.where(fm, 1.0 - blocks[:, :, 2], blocks[:, :, 2])
+                        actions[:, :, 0] = torch.where(fm, 1.0 - actions[:, :, 0], actions[:, :, 0])
+
+                # Random translation: shift the entire scene by a per-sample (dx, dy).
+                # Blocks and actions are shifted identically so index ordering is preserved.
+                if self.aug_translate > 0.0:
+                    t = self.aug_translate
+                    dx = (torch.rand(blocks.size(0), device=blocks.device) * 2 - 1) * t  # [B]
+                    dy = (torch.rand(blocks.size(0), device=blocks.device) * 2 - 1) * t  # [B]
+                    blocks[:, :, 0] += dx.unsqueeze(1)   # x1
+                    blocks[:, :, 1] += dy.unsqueeze(1)   # y1
+                    blocks[:, :, 2] += dx.unsqueeze(1)   # x2
+                    blocks[:, :, 3] += dy.unsqueeze(1)   # y2
+                    actions[:, :, 0] += dx.unsqueeze(1)  # action_x
+                    actions[:, :, 1] += dy.unsqueeze(1)  # action_y
+                    if not self.use_ball_relative:
+                        blocks[:, :, :4] = blocks[:, :, :4].clamp(0.0, 1.0)
+                        actions = actions.clamp(0.0, 1.0)
+
             if self.should_freeze_embedding:
                 with torch.no_grad():
                     block_embeddings = self.block_embed_layer(blocks)

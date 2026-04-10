@@ -727,6 +727,18 @@ class Parser:
         )
 
         self.parser.add_argument(
+            '--aug_flip',
+            type=str2bool, nargs='?', const=True, default=False,
+            help='Randomly mirror x-coordinates for 50%% of training observations.',
+        )
+
+        self.parser.add_argument(
+            '--aug_translate',
+            type=float, default=0.0,
+            help='Max random translation applied to all coordinates during training (normalized units).',
+        )
+
+        self.parser.add_argument(
             '--value_model_path',
             type=str,
             default=None,
@@ -735,3 +747,4 @@ class Parser:
 
     def parse_args(self):
         return self.parser.parse_args()
+

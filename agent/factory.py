@@ -11,6 +11,8 @@ def create_agent(args, env, name="agent"):
         obs_type=getattr(args, "obs_type", "symbolic"),
         should_freeze_embedding=getattr(args, "should_freeze_embedding", False),
         use_ball_relative=getattr(args, "use_ball_relative", False),
+        aug_flip=getattr(args, "aug_flip", False),
+        aug_translate=getattr(args, "aug_translate", 0.0),
     )
 
     if args.algo == "ppo":
@@ -59,3 +61,4 @@ def _create_ppo_agent(args, actor_critic, env, name):
         raise RuntimeError(
             f"[AgentAlgoInitError] Failed to initialize PPO agent '{name}'."
         ) from e
+

@@ -3,7 +3,8 @@ from .multigrid import MultigridNetwork
 
 
 def model_for_iphyre_agent(env, agent_type="agent", obs_type="symbolic",
-                           should_freeze_embedding=False, use_ball_relative=False):
+                           should_freeze_embedding=False, use_ball_relative=False,
+                           aug_flip=False, aug_translate=0.0):
     if "adversary_env" in agent_type:
         raise NotImplementedError("Adversary env not implemented for Iphyre")
     return IphyreNetwork(
@@ -11,7 +12,10 @@ def model_for_iphyre_agent(env, agent_type="agent", obs_type="symbolic",
         action_space=env.action_space,
         obs_type=obs_type,
         should_freeze_embedding=should_freeze_embedding,
-        use_ball_relative=use_ball_relative)
+        use_ball_relative=use_ball_relative,
+        aug_flip=aug_flip,
+        aug_translate=aug_translate,
+    )
 
 
 def model_for_multigrid_agent(env, agent_type="agent", mlp_hidden=64,
@@ -35,7 +39,10 @@ def build_model(env_name, env, agent_type="agent", **kwargs):
             agent_type=agent_type,
             obs_type=kwargs.get("obs_type", "symbolic"),
             should_freeze_embedding=kwargs.get("should_freeze_embedding", False),
-            use_ball_relative=kwargs.get("use_ball_relative", False))
+            use_ball_relative=kwargs.get("use_ball_relative", False),
+            aug_flip=kwargs.get("aug_flip", False),
+            aug_translate=kwargs.get("aug_translate", 0.0),
+        )
     elif env_name.startswith("MultiGrid") or env_name.startswith("MiniGrid"):
         return model_for_multigrid_agent(
             env=env,
@@ -45,3 +52,4 @@ def build_model(env_name, env, agent_type="agent", **kwargs):
             recurrent_hidden_size=kwargs.get("recurrent_hidden_size", 128))
     else:
         raise ValueError(f"Unsupported environment {env_name}.")
+

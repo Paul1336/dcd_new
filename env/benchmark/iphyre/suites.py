@@ -18,7 +18,7 @@ def load_test_suite(test_suite_name):
     """Return (env_names, env_task_configs) for a named Iphyre test suite."""
     print("Load test suite: ", test_suite_name)
     tasks_path = TASK_SUITE_PATH[test_suite_name]
-    task_dirs = os.listdir(tasks_path)
+    task_dirs = [d for d in os.listdir(tasks_path) if not d.startswith(".")]
 
     env_names = []
     env_task_configs = []

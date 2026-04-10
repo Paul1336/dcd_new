@@ -111,7 +111,7 @@ NUM_TRIALS = 3
 
 def build_cmd(seed, device, log_dir, method, exp_name,
               procedural=False, vlm_embedding=False, test=False, fake_clip=False,
-              ball_relative=False):
+              ball_relative=False, aug_flip=False, aug_translate=0.0):
     params = dict(PARAMS)
     if procedural:
         params.update(PROCEDURAL_OVERRIDES)
@@ -124,6 +124,10 @@ def build_cmd(seed, device, log_dir, method, exp_name,
         params['fake_clip'] = True
     if ball_relative:
         params['use_ball_relative'] = True
+    if aug_flip:
+        params['aug_flip'] = True
+    if aug_translate > 0.0:
+        params['aug_translate'] = aug_translate
     cmd = ['python', 'train.py']
     for k, v in params.items():
         cmd.append(f'--{k}={v}')
@@ -178,6 +182,10 @@ if __name__ == '__main__':
                         help='Replace CLIP with zero embeddings for timing (requires --vlm_embedding).')
     parser.add_argument('--ball_relative', action='store_true',
                         help='Encode all positions relative to the ball center.')
+    parser.add_argument('--aug_flip',      action='store_true',
+                        help='Randomly mirror x-coordinates for 50%% of training obs.')
+    parser.add_argument('--aug_translate', type=float, default=0.0,
+                        help='Max random translation in normalized coords (e.g. 0.05).')
     args = parser.parse_args()
 
     if args.procedural:
@@ -205,6 +213,8 @@ if __name__ == '__main__':
             test=args.test,
             fake_clip=args.fake_clip,
             ball_relative=args.ball_relative,
+            aug_flip=args.aug_flip,
+            aug_translate=args.aug_translate,
         )
         for i in range(num_trials)
     ]
@@ -220,6 +230,10 @@ if __name__ == '__main__':
         mode_parts.append('fake-CLIP')
     if args.ball_relative:
         mode_parts.append('BallRelative')
+    if args.aug_flip:
+        mode_parts.append('AugFlip')
+    if args.aug_translate > 0.0:
+        mode_parts.append(f'AugTranslate={args.aug_translate}')
     mode_label = f' [{", ".join(mode_parts)}]' if mode_parts else ''
 
     print(f'=== {num_trials} trial(s) (seeds {BASE_SEED}–{BASE_SEED + num_trials - 1}){mode_label} ===\n')
@@ -231,3 +245,4 @@ if __name__ == '__main__':
     if not args.test:
         input('Press Enter to start, Ctrl+C to cancel...')
     run_parallel(cmds)
+
